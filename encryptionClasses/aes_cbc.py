@@ -22,7 +22,7 @@ class AesCbc:
 		if size not in self._sizes: 
 			raise ValueError('Key size must be {} or {} bits.'.format(*self._sizes))
 		self._key_size = size
-		self.rounds = 1000
+		self.rounds = 100000
 		self.b64 = True
 	
 	def encrypt(self, data, password):
@@ -132,25 +132,5 @@ class AesCbc:
 		'''Removes PKCS7 padding.'''
 		padding = ord(data[-1:])
 		return data[:-padding]
-	
-	def create_password(self, size=16):
-		'''
-		Creates random 0-9a-zA-Z strings.
-		
-		:param size: int, optional
-		:returns str
-		'''
-		random_bytes = self._ivgen(size)
-		password = b64encode(random_bytes)[:size]
-		return password.decode()
 
-
-if __name__ == '__main__' : 
-	from sys import argv
-	
-	aes = AesCbc()
-	e = aes.encrypt("word", "pass")
-	d = aes.decrypt(e, "pass")
-	print(e.decode())
-	print(d.decode())
 
