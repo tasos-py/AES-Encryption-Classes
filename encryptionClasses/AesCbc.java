@@ -19,7 +19,7 @@ class AesCbc {
 	private int macSize = 32;
 	private int blockSize = 16;
 	private int keySize = 128;
-	public int rounds = 1000;
+	public int rounds = 100000;
 	public Boolean b64 = true;
 	
 	/**
