@@ -18,7 +18,7 @@ class AesCbc {
 	private $macSize = 32;
 	private $blockSize = 16;
 	private $keySize = 128;
-	public $rounds = 1000;
+	public $rounds = 100000;
 	public $b64 = true;
 	
 	/**
@@ -37,7 +37,7 @@ class AesCbc {
 	* Encrypts data and returns a base64 encoded string or raw bytes string. 
 	* @param string $data 
 	* @param string $password
-	* @return string 
+	* @return string (salt + iv + ciphertext + hmac)
 	*/
 	public function encrypt($data, $password) {
 		$iv = $this->IVGen($this->ivSize);
