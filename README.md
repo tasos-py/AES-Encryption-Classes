@@ -12,9 +12,9 @@ For that reason CBC mode is used, as GCM is not yet available without the use of
  - Java
  
  ### Features  
-_Encryption:_  
+#### _Encryption:_  
 AES 128/256, CBC mode.  
-_Key:_  
+#### _Key:_  
 PBKDF2 with SHA1, 100000 iterations by default.  
-_Authentication:_  
+#### _Authentication:_  
 HMAC with SHA256.
