@@ -17,15 +17,13 @@ class AesCbc
 	public int rounds;
 	public bool b64;
 
-	/// <exception cref="ArgumentException">
-	/// Thrown when invalid size is selected.
-	/// </exception>
+	/// <exception cref="ArgumentException">Thrown when invalid size is selected.</exception>
 	public AesCbc(int size = 128)
 	{
 		if (size != 128 && size != 256)
 			throw new ArgumentException("Size must be 128 or 256 bits.");
 		keySize = size;
-		rounds = 1000;
+		rounds = 100000;
 		b64 = true;
 	}
 
@@ -124,7 +122,6 @@ class AesCbc
 					{
 						cstream.Write(data, 0, data.Length);
 					}
-
 					return mstream.ToArray();
 				}
 			}
@@ -155,7 +152,6 @@ class AesCbc
 		{
 			rng.GetBytes(iv);
 		}
-
 		return iv;
 	}
 
@@ -184,17 +180,6 @@ class AesCbc
 			if (data_mac[i] != mac[i])
 				return false;
 		}
-
 		return true;
-	}
-
-	/// <summary>Creates random 0-9a-zA-Z strings.</summary>
-	/// <param name="size">The string size.</param>
-	/// <returns>Random string</returns>
-	public string CreatePassword(int size = 24)
-	{
-		byte[] randomBytes = IVGen(size);
-		string password = Convert.ToBase64String(randomBytes).Substring(0, size);
-		return password;
 	}
 }
