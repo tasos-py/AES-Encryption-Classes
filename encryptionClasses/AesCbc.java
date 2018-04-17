@@ -19,20 +19,21 @@ class AesCbc {
 	private int macSize = 32;
 	private int blockSize = 16;
 	private int keySize = 128;
+	public byte[] key = null;
 	public int rounds = 100000;
 	public Boolean b64 = true;
 	
 	/**
 	 * @param size, the key size
-	 * @throws IllegalArgumentException
+	 * @throws IllegalArgumentException if key size is invalid
 	 */
 	public AesCbc(int... size) throws IllegalArgumentException {		
 		keySize = (size.length > 0) ? size[0] : keySize;
 		if(keySize != 128 && keySize != 256) {
-			throw new IllegalArgumentException("Size must be 128 or 256 bits.");
+			throw new IllegalArgumentException("Key size must be 128 or 256 bits.");
 		} 
 		if(keySize > maxKeyLen()) {
-			throw new IllegalArgumentException("AES " + keySize + " not supported.");
+			throw new IllegalArgumentException(keySize + " key size not supported.");
 		}
 	}
 	
@@ -53,13 +54,10 @@ class AesCbc {
 		byte[] iv = IVGen(ivSize);
 		byte[] salt = IVGen(ivSize);
 		byte[][] keys = KeyGen(password, salt);
+		key = keys[0];
 		try{
 			Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-			cipher.init(
-				Cipher.ENCRYPT_MODE, 
-				new SecretKeySpec(keys[0], "AES"), 
-				new IvParameterSpec(iv)
-			);
+			cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key, "AES"), new IvParameterSpec(iv));
 			
 			byte[] encrypted = cipher.doFinal(data);
 			byte[] new_data = new byte[salt.length + iv.length + encrypted.length + macSize];
@@ -76,7 +74,7 @@ class AesCbc {
 			return new_data;
 		} catch(Exception e) {
 			System.out.println(e.getMessage());
-			return new byte[0];
+			return null;
 		}
 	}
 	
@@ -98,30 +96,24 @@ class AesCbc {
 			if(this.b64)
 				data = Base64.getDecoder().decode(new String(data, "ASCII"));
 			if(data.length < ivSize+ivSize+blockSize)
-				throw new Exception("Not enough data!");
+				throw new Exception("Not enough data.");
 			
 			byte[] salt = Arrays.copyOfRange(data, 0, 16);
 			byte[] iv = Arrays.copyOfRange(data, 16, 32);
 			byte[] encrypted = Arrays.copyOfRange(data, 32, data.length - macSize);
 			byte[] mac = Arrays.copyOfRange(data, 32 + encrypted.length, data.length);
-			if(encrypted.length % blockSize != 0)
-				throw new Exception("Ciphertext must be a multiple of " + blockSize + " bytes in length.");
-
 			byte[][] keys = this.KeyGen(password, salt);
+			key = keys[0];
 			byte[] iv_encrypted = Arrays.copyOfRange(data, 16, data.length - macSize);
 			if(!this.Verify(iv_encrypted, mac, keys[1]))
-				throw new Exception("Verification failed.");
+				throw new Exception("HMAC verification failed.");
 			
 			Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-			cipher.init(
-				Cipher.DECRYPT_MODE, 
-				new SecretKeySpec(keys[0], "AES"), 
-				new IvParameterSpec(iv)
-			);
+			cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key, "AES"), new IvParameterSpec(iv));
 			return cipher.doFinal(encrypted);
 		} catch (Exception e) {
 			System.out.println(e.getMessage());
-			return new byte[0];
+			return null;
 		}
 	}
 	
@@ -153,12 +145,12 @@ class AesCbc {
 		SecureRandom sr;
 		try {
 			sr = SecureRandom.getInstance("SHA1PRNG");
+			byte[] iv = new byte[(size.length > 0) ? size[0] : ivSize];
+			sr.nextBytes(iv);
+			return iv;
 		} catch (Exception e) {
 			return null;
 		}
-		byte[] iv = new byte[(size.length > 0) ? size[0] : ivSize];
-		sr.nextBytes(iv);
-		return iv;
 	}
 	
 	/**
@@ -173,7 +165,7 @@ class AesCbc {
 			hmac.init(new SecretKeySpec(key, "HmacSHA256"));
 			return  hmac.doFinal(data);
 		} catch (Exception e) {
-			return new byte[0];
+			return null;
 		}
 	}
 	
@@ -200,3 +192,4 @@ class AesCbc {
 		} 
 	}
 }
+
