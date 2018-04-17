@@ -5,7 +5,7 @@ using System.IO;
 using System.Collections.Generic;
 
 /// <summary>
-/// Encrypts and decrypts data using AES-CBC 128 - 256.
+/// Encrypts and decrypts data using AES-CBC 128 / 256.
 /// </summary>
 class AesCbc
 {
@@ -13,18 +13,19 @@ class AesCbc
 	private int ivSize = 16;
 	private int macSize = 32;
 	private int blockSize = 16;
-	private int keySize;
-	public int rounds;
-	public bool b64;
+	private int keySize = 128;
+	public byte[] key = null;
+	public int rounds = 100000;
+	public bool b64 = true;
 
-	/// <exception cref="ArgumentException">Thrown when invalid size is selected.</exception>
+	/// <exception cref="ArgumentException">
+	/// Thrown when invalid size is selected.
+	/// </exception>
 	public AesCbc(int size = 128)
 	{
-		if (size != 128 && size != 256)
-			throw new ArgumentException("Size must be 128 or 256 bits.");
+		if (Array.IndexOf(sizes, size) == -1)
+			throw new ArgumentException("Key size must be 128 or 256 bits.");
 		keySize = size;
-		rounds = 100000;
-		b64 = true;
 	}
 
 	/// <summary>Encrypts data (string)</summary>
@@ -33,8 +34,7 @@ class AesCbc
 	/// <returns>Raw bytes or base64 encoded data.</returns>
 	public byte[] Encrypt(string data, string password)
 	{
-		byte[] data_bytes = Encoding.UTF8.GetBytes(data);
-		return Encrypt(data_bytes, password);
+		return Encrypt(Encoding.UTF8.GetBytes(data), password);
 	}
 
 	/// <summary>Encrypts data (bytes)</summary>
@@ -43,7 +43,8 @@ class AesCbc
 		byte[] iv = IVGen();
 		byte[] salt = IVGen();
 		byte[][] keys = KeyGen(password, salt);
-		byte[] encrypted = Transformer(data, keys[0], iv, true);
+		key = keys[0];
+		byte[] encrypted = Transformer(data, key, iv, true);
 
 		List<byte> new_data = new List<byte>();
 		new_data.AddRange(iv);
@@ -63,8 +64,7 @@ class AesCbc
 	/// <returns>Decrypted bytes.</returns>
 	public byte[] Decrypt(string data, string password)
 	{
-		byte[] bytes = Encoding.ASCII.GetBytes(data);
-		return Decrypt(bytes, password);
+		return Decrypt(Encoding.ASCII.GetBytes(data), password);
 	}
 
 	/// <summary>Decrypts data (bytes).</summary>
@@ -75,29 +75,26 @@ class AesCbc
 			if (this.b64)
 				data = Convert.FromBase64String((Encoding.ASCII.GetString(data)));
 			if (data.Length < ivSize + ivSize + blockSize + macSize)
-				throw new Exception("Not enough data!");
+				throw new Exception("Not enough data.");
 
 			List<byte> decoded = new List<byte>(data);
 			byte[] salt = decoded.GetRange(0, ivSize).ToArray();
 			byte[] iv = decoded.GetRange(ivSize, ivSize).ToArray();
-			byte[] encrypted = decoded.GetRange(ivSize + ivSize, decoded.Count - (ivSize + ivSize + macSize)).ToArray();
+			byte[] encrypted = decoded.GetRange(ivSize * 2, decoded.Count - (ivSize + ivSize + macSize)).ToArray();
 			byte[] hmac = decoded.GetRange(decoded.Count - macSize, macSize).ToArray();
-			if (encrypted.Length % blockSize != 0)
-				throw new Exception("Ciphertext must be a multiple of " + blockSize + " bytes in length.");
-
 			byte[][] keys = KeyGen(password, salt);
+			key = keys[0];
 			byte[] iv_encrypted = decoded.GetRange(ivSize, decoded.Count - (ivSize + macSize)).ToArray();
 
 			if (!Verify(iv_encrypted, hmac, keys[1]))
 				throw new Exception("Verification failed.");
-
-			byte[] decrypted = Transformer(encrypted, keys[0], iv, false);
+			byte[] decrypted = Transformer(encrypted, key, iv, false);
 			return decrypted;
 		}
 		catch (Exception e)
 		{
 			Console.WriteLine(e.Message);
-			return new byte[0];
+			return null;
 		}
 	}
 
@@ -183,3 +180,4 @@ class AesCbc
 		return true;
 	}
 }
+
