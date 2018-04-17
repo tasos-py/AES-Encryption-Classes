@@ -7,7 +7,7 @@ from base64 import b64encode, b64decode
 
 class AesCbc: 
 	'''
-	Encrypts / decrypts data using AES CBC 128 / 256.
+	Encrypts and decrypts data using AES CBC 128 / 256.
 	'''
 	_sizes = (128, 256)
 	_salt_size = 16
@@ -22,6 +22,7 @@ class AesCbc:
 		if size not in self._sizes: 
 			raise ValueError('Key size must be {} or {} bits.'.format(*self._sizes))
 		self._key_size = size
+		self.key = None
 		self.rounds = 100000
 		self.b64 = True
 	
@@ -35,9 +36,9 @@ class AesCbc:
 		'''
 		data = self._pkcs_pad(data if type(data) is bytes else data.encode())
 		iv, salt = self._ivgen(self._iv_size), self._ivgen(self._salt_size)
-		aes_key, mac_key = self._keygen(password, salt)
+		self.key, mac_key = self._keygen(password, salt)
 		
-		cipher = AES.new(key=aes_key, mode=AES.MODE_CBC, IV=iv)
+		cipher = AES.new(key=self.key, mode=AES.MODE_CBC, IV=iv)
 		encrypted = cipher.encrypt(data)
 		mac = self._sign(iv + encrypted, mac_key) 
 		new_data = salt + iv + encrypted + mac
@@ -60,7 +61,7 @@ class AesCbc:
 			if self.b64: 
 				data = b64decode(data)
 			if len(data) < self._iv_size + self._salt_size + AES.block_size + self._mac_size: 
-				raise ValueError("Not enough data!")
+				raise ValueError("Not enough data.")
 			
 			salt, iv, encrypted, mac = (
 				data[:self._iv_size], 
@@ -68,14 +69,11 @@ class AesCbc:
 				data[self._iv_size+self._salt_size:-self._mac_size], 
 				data[-self._mac_size:]
 			)
-			
-			if len(encrypted) % AES.block_size != 0: 
-				raise ValueError('Ciphertext must be a multiple of %d bytes in length.' % AES.block_size)
-			aes_key, mac_key = self._keygen(password, salt)
+			self.key, mac_key = self._keygen(password, salt)
 			if not self._verify(iv + encrypted, mac, mac_key): 
-				raise Exception('Verification failed.')
+				raise Exception("Verification failed.")
 			
-			cipher = AES.new(key=aes_key, mode=AES.MODE_CBC, IV=iv)
+			cipher = AES.new(key=self.key, mode=AES.MODE_CBC, IV=iv)
 			decrypted = cipher.decrypt(encrypted)
 			return self._pkcs_unpad(decrypted)
 		except Exception as e: 
@@ -89,8 +87,9 @@ class AesCbc:
 		:param salt: bytes
 		:returns tuple[bytes]
 		'''
-		key = PBKDF2(password, salt, int(self._key_size/8)*2, self.rounds)
-		return (key[:int(self._key_size/8)], key[int(self._key_size/8):])
+		key_size = int(self._key_size / 8)
+		key = PBKDF2(password, salt, key_size * 2, self.rounds)
+		return (key[:key_size], key[key_size:])
 	
 	def _ivgen(self, size=16): 
 		'''
@@ -124,7 +123,7 @@ class AesCbc:
 		return mac == self._sign(data, key)
 	
 	def _pkcs_pad(self, data): 
-		'''PKCS7 padding.'''
+		'''Preforms PKCS7 padding.'''
 		padding = AES.block_size - (len(data) % AES.block_size)
 		return data + (chr(padding) * padding).encode()
 	
