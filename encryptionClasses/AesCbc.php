@@ -5,11 +5,7 @@
 */
 class AesCbc {	
 	/**
-	* @var int $sizes 
-	* @var int $ivSize 
-	* @var int $ivSize 
-	* @var int $macSize 
-	* @var int $blockSize 
+	* @var string $key 
 	* @var int $rounds 
 	* @var bool $b64 
 	*/
@@ -18,6 +14,7 @@ class AesCbc {
 	private $macSize = 32;
 	private $blockSize = 16;
 	private $keySize = 128;
+	public $key = null;
 	public $rounds = 100000;
 	public $b64 = true;
 	
@@ -30,23 +27,24 @@ class AesCbc {
 		if(!in_array($size, $this->sizes)) 
 			throw new UnexpectedValueException("Key size must be 128 or 256 bits.\n");
 		$this->keySize = $size;
-		$this->cipher = "AES-$this->keySize-CBC";
 	}
 	
 	/**
 	* Encrypts data and returns a base64 encoded string or raw bytes string. 
 	* @param string $data 
 	* @param string $password
-	* @return string (salt + iv + ciphertext + hmac)
+	* @return string 
 	*/
 	public function encrypt($data, $password) {
 		$iv = $this->IVGen($this->ivSize);
 		$salt = $this->IVGen($this->ivSize);
-		list($aes_key, $mac_key) = $this->keyGen($password, $salt);
+		list($this->key, $mac_key) = $this->keyGen($password, $salt);
 		
-		$encrypted = openssl_encrypt($data, $this->cipher, $aes_key, true, $iv);
+		$cipher = "AES-$this->keySize-CBC";
+		$encrypted = openssl_encrypt($data, $cipher, $this->key, true, $iv);
 		$mac = $this->sign($iv.$encrypted, $mac_key); 
 		$new_data = $salt.$iv.$encrypted.$mac;
+		
 		if($this->b64) 
 			$new_data = base64_encode($new_data);
 		return $new_data;
@@ -71,16 +69,12 @@ class AesCbc {
 				substr($data, ($this->ivSize + $this->ivSize), -$this->macSize), 
 				substr($data, -$this->macSize)
 			);
-			
-			if(strlen($encrypted) % $this->blockSize != 0) 
-				throw new UnexpectedValueException(
-					"Ciphertext must be a multiple of $this->blockSize bytes in length.\n"
-				);
-			list($aes_key, $mac_key) = $this->keyGen($password, $salt);
+			list($this->key, $mac_key) = $this->keyGen($password, $salt);
 			if(!$this->verify($iv.$encrypted, $mac, $mac_key)) 
-				throw new Exception("Verification failed.\n");
+				throw new Exception("HMAC verification failed.\n");
 			
-			$decrypted = openssl_decrypt($encrypted, $this->cipher, $aes_key, true, $iv);
+			$cipher = "AES-$this->keySize-CBC";
+			$decrypted = openssl_decrypt($encrypted, $cipher, $this->key, true, $iv);
 			return $decrypted;
 		} catch(Exception $e) {
 			echo $e->getMessage() . "\n";
@@ -94,8 +88,8 @@ class AesCbc {
 	* @return array[string]
 	*/
 	private function keyGen($password, $salt) {
-		$key_size = $this->keySize/8;
-		$key = openssl_pbkdf2($password, $salt, $key_size*2, $this->rounds, "SHA1");
+		$key_size = $this->keySize / 8;
+		$key = openssl_pbkdf2($password, $salt, $key_size * 2, $this->rounds, "SHA1");
 		$keys = array(substr($key, 0, $key_size), substr($key, $key_size));
 		return $keys;
 	}
