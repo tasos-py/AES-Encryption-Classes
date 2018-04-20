@@ -46,16 +46,16 @@ class AesCbc
 		key = keys[0];
 		byte[] encrypted = Transformer(data, key, iv, true);
 
-		List<byte> new_data = new List<byte>();
-		new_data.AddRange(iv);
-		new_data.AddRange(encrypted);
-		byte[] hmac = Sign(new_data.ToArray(), keys[1]);
-		new_data.InsertRange(0, salt);
-		new_data.InsertRange(new_data.Count, hmac);
+		List<byte> newData = new List<byte>();
+		newData.AddRange(iv);
+		newData.AddRange(encrypted);
+		byte[] hmac = Sign(newData.ToArray(), keys[1]);
+		newData.InsertRange(0, salt);
+		newData.InsertRange(newData.Count, hmac);
 
 		if (this.b64)
-			return Encoding.ASCII.GetBytes(Convert.ToBase64String(new_data.ToArray()));
-		return new_data.ToArray();
+			return Encoding.ASCII.GetBytes(Convert.ToBase64String(newData.ToArray()));
+		return newData.ToArray();
 	}
 
 	/// <summary>Decrypts data (string)</summary>
@@ -77,14 +77,14 @@ class AesCbc
 			if (data.Length < ivSize + ivSize + blockSize + macSize)
 				throw new Exception("Not enough data.");
 
-			List<byte> decoded = new List<byte>(data);
-			byte[] salt = decoded.GetRange(0, ivSize).ToArray();
-			byte[] iv = decoded.GetRange(ivSize, ivSize).ToArray();
-			byte[] encrypted = decoded.GetRange(ivSize * 2, decoded.Count - (ivSize + ivSize + macSize)).ToArray();
-			byte[] hmac = decoded.GetRange(decoded.Count - macSize, macSize).ToArray();
+			List<byte> siem = new List<byte>(data);
+			byte[] salt = siem.GetRange(0, ivSize).ToArray();
+			byte[] iv = siem.GetRange(ivSize, ivSize).ToArray();
+			byte[] encrypted = siem.GetRange(ivSize * 2, siem.Count - (ivSize * 2 + macSize)).ToArray();
+			byte[] hmac = siem.GetRange(siem.Count - macSize, macSize).ToArray();
 			byte[][] keys = KeyGen(password, salt);
 			key = keys[0];
-			byte[] iv_encrypted = decoded.GetRange(ivSize, decoded.Count - (ivSize + macSize)).ToArray();
+			byte[] iv_encrypted = siem.GetRange(ivSize, siem.Count - (ivSize + macSize)).ToArray();
 
 			if (!Verify(iv_encrypted, hmac, keys[1]))
 				throw new Exception("Verification failed.");
@@ -113,13 +113,13 @@ class AesCbc
 			aes.Padding = PaddingMode.PKCS7;
 			using (ICryptoTransform ict = (encrypt ? aes.CreateEncryptor(key, iv) : aes.CreateDecryptor(key, iv)))
 			{
-				using (MemoryStream mstream = new MemoryStream())
+				using (MemoryStream ms = new MemoryStream())
 				{
-					using (CryptoStream cstream = new CryptoStream(mstream, ict, CryptoStreamMode.Write))
+					using (CryptoStream cs = new CryptoStream(ms, ict, CryptoStreamMode.Write))
 					{
-						cstream.Write(data, 0, data.Length);
+						cs.Write(data, 0, data.Length);
 					}
-					return mstream.ToArray();
+					return ms.ToArray();
 				}
 			}
 		}
