@@ -2,7 +2,7 @@
 AES CBC encryption in Python, PHP, C#, Java
 
 ### Description  
-The main goal of this project is to provide simple, secure and compatible code (data encrypted in Python can be decrypted in PHP, and so on). For that reason CBC mode is used, as GCM is not yet available without the use of third party libraries.
+The main goal of this project is to provide simple, secure and compatible code (data encrypted in Python can be decrypted in PHP, and so on). For that reason CBC mode is used, as GCM is not yet widely available and CTR is not implemented in the builtin AES class in C#.
 
 ### Languages  
  - Python (requires [pycryptodome](https://www.pycryptodome.org/en/latest/index.html))
