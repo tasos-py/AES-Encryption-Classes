@@ -25,7 +25,7 @@ class AesCbc {
 	
 	/**
 	 * @param size, the key size
-	 * @throws IllegalArgumentException if key size is invalid
+	 * @throws IllegalArgumentException
 	 */
 	public AesCbc(int... size) throws IllegalArgumentException {		
 		keySize = (size.length > 0) ? size[0] : keySize;
@@ -60,18 +60,18 @@ class AesCbc {
 			cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key, "AES"), new IvParameterSpec(iv));
 			
 			byte[] encrypted = cipher.doFinal(data);
-			byte[] new_data = new byte[salt.length + iv.length + encrypted.length + macSize];
-			System.arraycopy(salt, 0, new_data, 0, salt.length);
-			System.arraycopy(iv, 0, new_data, salt.length, iv.length);
-			System.arraycopy(encrypted, 0, new_data, salt.length + iv.length, encrypted.length);
+			byte[] newData = new byte[ivSize + ivSize + encrypted.length + macSize];
+			System.arraycopy(salt, 0, newData, 0, ivSize);
+			System.arraycopy(iv, 0, newData, ivSize, ivSize);
+			System.arraycopy(encrypted, 0, newData, ivSize + ivSize, encrypted.length);
 
-			byte[] iv_encrypted = Arrays.copyOfRange(new_data, 16, new_data.length - macSize);
+			byte[] iv_encrypted = Arrays.copyOfRange(newData, 16, newData.length - macSize);
 			byte[] mac = this.Sign(iv_encrypted, keys[1]);
-			System.arraycopy(mac, 0, new_data, salt.length + iv.length + encrypted.length, mac.length);
+			System.arraycopy(mac, 0, newData, ivSize + ivSize + encrypted.length, mac.length);
 			
 			if(this.b64) 
-				new_data = Base64.getEncoder().encodeToString(new_data).getBytes();
-			return new_data;
+				newData = Base64.getEncoder().encodeToString(newData).getBytes();
+			return newData;
 		} catch(Exception e) {
 			System.out.println(e.getMessage());
 			return null;
@@ -95,16 +95,16 @@ class AesCbc {
 		try {
 			if(this.b64)
 				data = Base64.getDecoder().decode(new String(data, "ASCII"));
-			if(data.length < ivSize+ivSize+blockSize)
+			if(data.length < ivSize + ivSize + blockSize)
 				throw new Exception("Not enough data.");
 			
-			byte[] salt = Arrays.copyOfRange(data, 0, 16);
-			byte[] iv = Arrays.copyOfRange(data, 16, 32);
-			byte[] encrypted = Arrays.copyOfRange(data, 32, data.length - macSize);
-			byte[] mac = Arrays.copyOfRange(data, 32 + encrypted.length, data.length);
+			byte[] salt = Arrays.copyOfRange(data, 0, ivSize);
+			byte[] iv = Arrays.copyOfRange(data, ivSize, ivSize * 2);
+			byte[] encrypted = Arrays.copyOfRange(data, ivSize * 2, data.length - macSize);
+			byte[] mac = Arrays.copyOfRange(data, ivSize * 2 + encrypted.length, data.length);
 			byte[][] keys = this.KeyGen(password, salt);
 			key = keys[0];
-			byte[] iv_encrypted = Arrays.copyOfRange(data, 16, data.length - macSize);
+			byte[] iv_encrypted = Arrays.copyOfRange(data, ivSize, data.length - macSize);
 			if(!this.Verify(iv_encrypted, mac, keys[1]))
 				throw new Exception("HMAC verification failed.");
 			
