@@ -25,7 +25,7 @@ class AesCbc {
 	
 	/**
 	 * @param size, the key size
-	 * @throws IllegalArgumentException
+	 * @throws IllegalArgumentException when size is invalid.
 	 */
 	public AesCbc(int... size) throws IllegalArgumentException {		
 		keySize = (size.length > 0) ? size[0] : keySize;
@@ -70,7 +70,7 @@ class AesCbc {
 			System.arraycopy(mac, 0, newData, ivSize + ivSize + encrypted.length, mac.length);
 			
 			if(this.b64) 
-				newData = Base64.getEncoder().encodeToString(newData).getBytes();
+				return Base64.getEncoder().encodeToString(newData).getBytes();
 			return newData;
 		} catch(Exception e) {
 			System.out.println(e.getMessage());
@@ -125,11 +125,12 @@ class AesCbc {
 	 */
 	private byte[][] KeyGen(String password, byte[] salt) {
 		PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt, rounds, keySize*2);
+		int ks = keySize / 8;
 		try {
 			SecretKeyFactory skf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
 			byte[] keys = skf.generateSecret(spec).getEncoded();
-			byte[] aes_key = Arrays.copyOfRange(keys, 0, keySize/8);
-			byte[] mac_key = Arrays.copyOfRange(keys, keySize/8, (keySize/8)*2);
+			byte[] aes_key = Arrays.copyOfRange(keys, 0, ks);
+			byte[] mac_key = Arrays.copyOfRange(keys, ks, ks * 2);
 			return new byte[][] {aes_key, mac_key};
 		} catch (Exception e) {
 			return null;
@@ -142,10 +143,10 @@ class AesCbc {
 	 * @return random bytes
 	 */
 	private byte[] IVGen(Integer... size) {
+		byte[] iv = new byte[(size.length > 0) ? size[0] : ivSize];
 		SecureRandom sr;
 		try {
 			sr = SecureRandom.getInstance("SHA1PRNG");
-			byte[] iv = new byte[(size.length > 0) ? size[0] : ivSize];
 			sr.nextBytes(iv);
 			return iv;
 		} catch (Exception e) {
