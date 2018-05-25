@@ -99,7 +99,7 @@ class AesEncryption:
 	def random_bytes(self, size=16): 
 		'''
 		Creates random bytes. 
-		Used for IV or password generation.
+		Used for IV, salt or password generation.
 		
 		:param size: int, optional
 		:returns bytes
