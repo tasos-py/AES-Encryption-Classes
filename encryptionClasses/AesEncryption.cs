@@ -185,13 +185,13 @@ class AesEncryption
 	/// <returns>True if the MACs match else false.</returns>
 	private bool Verify(byte[] data, byte[] mac, byte[] key)
 	{
-		bool match = true;
 		byte[] data_mac = Sign(data, key);
 		for (int i = 0; i < data_mac.Length; i++)
 		{
-			match = (data_mac[i] == mac[i]);
+			if(data_mac[i] != mac[i])
+				return false;
 		}
-		return match;
+		return true;
 	}
 }
 
