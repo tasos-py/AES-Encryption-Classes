@@ -297,9 +297,9 @@ class AesEncryption
 
 	/// <summary>
 	/// Creates a RijndaelManaged object for encryption.
-	/// RijndaelManaged is used because AesManaged doesn't accept unpaded blocks (CFB).
+	/// RijndaelManaged is used because AesManaged doesn't accept unpadded blocks.
 	/// </summary>
-	public RijndaelManaged Cipher()
+	private RijndaelManaged Cipher()
 	{
 		RijndaelManaged cipher = new RijndaelManaged
 		{
@@ -324,7 +324,7 @@ class AesEncryption
 		}
 	}
 
-	/// <summary>Creates a MAC signature of a file.</summary>
+	/// <summary>Creates MAC signature of a file.</summary>
 	/// <param name="path">The file path.</param>
 	/// <param name="key">The key.</param>
 	/// <returns>MAC</returns>
@@ -343,7 +343,7 @@ class AesEncryption
 
 	/// <summary>Verifies that the MAC is valid.</summary>
 	/// <param name="data">The data (IV + ciphertext).</param>
-	/// <param name="mac">The received MAC.</param>
+	/// <param name="mac">The MAC to verify.</param>
 	/// <param name="key">The key.</param>
 	/// <returns>True if the MAC is valid else false.</returns>
 	private bool Verify(byte[] data, byte[] mac, byte[] key)
@@ -364,8 +364,7 @@ class AesEncryption
 	}
 
 	/// <summary>
-	/// Checks if the two MACs are equal, 
-	/// using constant time comparisson algorithm.
+	/// Checks if the two MACs are equal, using constant time comparisson.
 	/// </summary>
 	/// <returns>True if MACs match else false.</returns>
 	private bool CompareMacs(byte[] mac1, byte[] mac2)
@@ -387,8 +386,8 @@ class AesEncryption
 	/// Chunk size should be a multiple of 16 in CBC mode.
 	/// </summary>
 	/// <param name="path">The file path</param>
-	/// <param name="start">The starting position</param>
-	/// <param name="end">The ending position</param>
+	/// <param name="start">The starting position in file</param>
+	/// <param name="end">The ending position in file (file size - end)</param>
 	/// <yields>bytes</yields>
 	public static IEnumerable<byte[]> ReadFileChunks(string path, int start = 0, int end = 0)
 	{
