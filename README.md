@@ -6,7 +6,7 @@ The main goal of this project is to provide simple, secure and compatible code (
 However, this code hasn't been thoroughly tested or revised by professional cryptographers, so the use of a better established library (like libsodium for example) would be preferable.
 
 ### Languages  
- - Python - Tested versions 2.7, 3.6. Requires [pycryptodome](https://www.pycryptodome.org/en/latest/index.html)
+ - Python - Tested versions 2.7, 3.6. Requires [PyCryptodome](https://www.pycryptodome.org/en/latest/index.html)
  - PHP - Tested versions 5.5, 7.1
  - C# - Tested versions 4, 7.2
  - Java - Tested versions 7, 9. Only 128 bit keys are supported before Java 9
