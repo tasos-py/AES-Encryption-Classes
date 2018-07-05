@@ -114,7 +114,6 @@ class AesEncryption {
         $salt = $this->randomBytes($this->saltLen);
         $iv = $this->randomBytes($this->ivLen);
         list($aesKey, $macKey) = $this->keys($password, $salt);
-        
         try {
             if(($fileSize = filesize($path)) === false) {
                 throw new RuntimeException("Can't read file '$path'.\n");
