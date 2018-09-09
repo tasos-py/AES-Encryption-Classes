@@ -23,12 +23,12 @@ class AesEncryption {
         { put("CFB", "AES/CFB8/NoPadding"); } 
     };
     private List<Integer> sizes = Arrays.asList(128, 192, 256);
-    private int size = 128;
     private int saltLen = 16;
     private int ivLen = 16;
     private int macLen = 32;
     private String mode = "CBC";
     private int keyLen = 16;
+
     public int keyIterations = 20000;
     public Boolean base64 = true;
     
@@ -50,7 +50,6 @@ class AesEncryption {
         }
         this.mode = mode;
         this.keyLen = size / 8;
-        this.size = size;
     }
     
     /**
@@ -68,11 +67,11 @@ class AesEncryption {
     public AesEncryption(int size) throws IllegalArgumentException {        
         this("CBC", size);
     }
-        
+    
     public AesEncryption() {}
-        
+    
     /**
-     * Encrypts bytes with the supplied password, returns raw or base64 encoded bytes. 
+     * Encrypts data with the supplied password, returns raw or base64 encoded bytes. 
      * @param data the data to encrypt
      * @param password
      * @return encrypted data (salt + iv + ciphertext + hmac)
@@ -87,8 +86,8 @@ class AesEncryption {
             
             Cipher cipher = this.cipher(Cipher.ENCRYPT_MODE, aesKey, iv);
             byte[] ciphertext = cipher.doFinal(data);
-            
             byte[] encrypted = new byte[saltLen + ivLen + ciphertext.length + macLen];
+
             System.arraycopy(salt, 0, encrypted, 0, saltLen);
             System.arraycopy(iv, 0, encrypted, saltLen, ivLen);
             System.arraycopy(ciphertext, 0, encrypted, saltLen + ivLen, ciphertext.length);
@@ -98,7 +97,7 @@ class AesEncryption {
             System.arraycopy(mac, 0, encrypted, saltLen + ivLen + ciphertext.length, mac.length);
             
             if(base64) {
-                return Base64.getEncoder().encodeToString(encrypted).getBytes();
+                return Base64.getEncoder().encode(encrypted);
             }
             return encrypted;
         } catch(IllegalBlockSizeException | BadPaddingException e) {
@@ -108,7 +107,7 @@ class AesEncryption {
     }
     
     /** 
-     * Encrypts strings with the supplied password. 
+     * Encrypts data (string) with the supplied password. 
      */
     public byte[] encrypt(String data, String password) {
         return encrypt(data.getBytes(), password);
@@ -123,7 +122,7 @@ class AesEncryption {
     public byte[] decrypt(byte[] data, String password) {
         try {
             if(base64) {
-                data = Base64.getDecoder().decode(new String(data));
+                data = Base64.getDecoder().decode(data);
             }
             byte[] salt = Arrays.copyOfRange(data, 0, saltLen);
             byte[] iv = Arrays.copyOfRange(data, saltLen, saltLen + ivLen);
@@ -147,7 +146,7 @@ class AesEncryption {
     }
     
     /** 
-     * Decrypts strings (base64 encoded bytes) with the supplied password. 
+     * Decrypts data (base64 string) with the supplied password. 
      */
     public byte[] decrypt(String data, String password) {
         return decrypt(data.getBytes(), password);
@@ -245,17 +244,14 @@ class AesEncryption {
     /**
      * Creates a pair of keys from the given password and salt.
      * One key is used for encryption, the other for authentication.
-     * @param password
-     * @param salt
-     * @return keys, the derived key split in two parts
      */
     private byte[][] keys(String password, byte[] salt) {
-        String hash = "PBKDF2WithHmacSHA256";
+        String kdf = "PBKDF2WithHmacSHA256";
         PBEKeySpec spec = new PBEKeySpec(
             password.toCharArray(), salt, keyIterations, keyLen * 8 * 2
         );
         try {
-            SecretKeyFactory skf = SecretKeyFactory.getInstance(hash);
+            SecretKeyFactory skf = SecretKeyFactory.getInstance(kdf);
             byte[] keys = skf.generateSecret(spec).getEncoded();
             byte[] aes_key = Arrays.copyOfRange(keys, 0, keyLen);
             byte[] mac_key = Arrays.copyOfRange(keys, keyLen, keyLen * 2);
@@ -267,15 +263,11 @@ class AesEncryption {
 
     /**
      * Creates random bytes, used for IV and salt.
-     * @param size the length of random bytes
-     * @return random bytes
-     * @throws AssertionError 
      */
     private byte[] randomBytes(Integer... size) {
-        String rng = "SHA1PRNG";
         byte[] rb = new byte[(size.length > 0) ? size[0] : ivLen];
         try {
-            SecureRandom sr = SecureRandom.getInstance(rng);
+            SecureRandom sr = SecureRandom.getInstance("SHA1PRNG");
             sr.nextBytes(rb);
             return rb;
         } catch (NoSuchAlgorithmException e) {
@@ -285,11 +277,6 @@ class AesEncryption {
     
     /**
      * Initiates a Cipher object with the key and iv. 
-     * @param cipherMode encrypt / decrypt mode
-     * @param key AES key
-     * @param iv
-     * @return Cipher object
-     * @throws AssertionError 
      */ 
     private Cipher cipher(int cipherMode, byte[] key, byte[] iv) {
         SecretKeySpec keySpec = new SecretKeySpec(key, "AES");
@@ -306,10 +293,6 @@ class AesEncryption {
     
     /**
      * Creates a MAC for ciphertext authentication.
-     * @param data
-     * @param key the HMAC key
-     * @return MAC
-     * @throws AssertionError
      */
     private byte[] sign(byte[] data, byte[] key) {
         String hash = "HmacSHA256";
@@ -323,13 +306,8 @@ class AesEncryption {
     }
     
     /**
-     * Computes the MAC of file, for data authentication.
-     * @param path the file path
-     * @param key the HMAC key
-     * @param start the starting position
-     * @param end the ending position (filesize - end)
-     * @return MAC
-     * @throws IOException, AssertionError 
+     * Computes a MAC of file, for data authentication.
+     * @throws IOException 
      */
     private byte[] signFile(String path, byte[] key, int start, int end) throws IOException {
         String hash = "HmacSHA256";
@@ -349,9 +327,6 @@ class AesEncryption {
     
     /**
      * Verifies that the received MAC is valid.
-     * @param data the received data
-     * @param mac the received MAC
-     * @param key HMAC key
      * @throws IllegalArgumentException when MAC is invalid
      */
     private void verify(byte[] data, byte[] mac, byte[] key) throws IllegalArgumentException {
@@ -363,9 +338,6 @@ class AesEncryption {
     
     /**
      * Verifies that the MAC of a file is valid.
-     * @param path the file path
-     * @param mac the received MAC
-     * @param key HMAC key
      * @throws IllegalArgumentException when MAC is invalid
      * @throws IOException when file is inaccessible
      */
@@ -379,14 +351,13 @@ class AesEncryption {
     
     /**
      * Handles exceptions - prints a message by default.
-     * @param exception
      */
     private void errorHandler(Exception exception) {
         System.out.println(exception);
     }
     
     /**
-     * A poor man's generator that "yields" file chunks.
+     * An iterator that "yields" file chunks.
      */
     private class FileChunks implements Iterable<byte[]> {    
         private FileInputStream fis;
@@ -444,8 +415,7 @@ class AesEncryption {
         try {
             return Cipher.getMaxAllowedKeyLength("AES");
         } catch (NoSuchAlgorithmException e) {
-            this.errorHandler(e);
-            return 0;
+            throw new AssertionError(e);
         } 
     }
 }
