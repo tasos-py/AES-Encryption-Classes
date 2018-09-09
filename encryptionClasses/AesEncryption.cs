@@ -5,10 +5,11 @@ using System.IO;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
+
 /// <summary>
-/// Encrypts - decrypts data and files using AES CBC/CFB, 128/192/256 bits.
+/// Encrypts data and files using AES CBC/CFB, 128/192/256 bits.
 /// </summary>
-class AesEncryption
+class AETest
 {
     private Dictionary<string, CipherMode> modes = new Dictionary<string, CipherMode>()
     {
@@ -29,7 +30,7 @@ class AesEncryption
     /// <exception cref="ArgumentException">
     /// Thrown when mode is not supported or size is invalid.
     /// </exception>
-    public AesEncryption(string mode = "CBC", int size = 128)
+    public AETest(string mode = "CBC", int size = 128)
     {
         mode = mode.ToUpper();
         if (!modes.ContainsKey(mode))
@@ -49,6 +50,7 @@ class AesEncryption
     {
         byte[] iv = RandomBytes(ivLen);
         byte[] salt = RandomBytes(saltLen);
+
         byte[][] keys = Keys(password, salt);
         byte[] aesKey = keys[0], macKey = keys[1];
         byte[] ciphertext;
@@ -76,7 +78,7 @@ class AesEncryption
         return encrypted;
     }
 
-    /// <summary>Encrypts data.</summary>
+    /// <summary>Encrypts data (string)</summary>
     public byte[] Encrypt(string data, string password)
     {
         return Encrypt(Encoding.UTF8.GetBytes(data), password);
@@ -273,8 +275,8 @@ class AesEncryption
     /// <returns>keys</returns>
     private byte[][] Keys(string password, byte[] salt)
     {
-        byte[] passBytes = Encoding.UTF8.GetBytes(password);
-        byte[] key = Pbkdf2Sha256(passBytes, salt, keyIterations, keyLen * 2);
+        byte[] passwordBytes = Encoding.UTF8.GetBytes(password);
+        byte[] key = Pbkdf2Sha256(passwordBytes, salt);
         byte[][] keys = new byte[2][] { new byte[keyLen], new byte[keyLen] };
 
         Array.Copy(key, 0, keys[0], 0, keyLen);
@@ -297,7 +299,7 @@ class AesEncryption
 
     /// <summary>
     /// Creates a RijndaelManaged object for encryption.
-    /// RijndaelManaged is used because AesManaged doesn't accept unpadded blocks.
+    /// RijndaelManaged is used as AesManaged doesn't accept unpadded blocks.
     /// </summary>
     private RijndaelManaged Cipher()
     {
@@ -343,31 +345,33 @@ class AesEncryption
 
     /// <summary>Verifies that the MAC is valid.</summary>
     /// <param name="data">The data (IV + ciphertext).</param>
-    /// <param name="mac">The MAC to verify.</param>
+    /// <param name="mac">The MAC to check.</param>
     /// <param name="key">The key.</param>
     /// <exception cref="ArgumentException">Thrown if MAC check fails</exception>
     private void Verify(byte[] data, byte[] mac, byte[] key)
-    {
+    {    
         byte[] dataMac = Sign(data, key);
+
         if (!CompareMacs(mac, dataMac))
             throw new ArgumentException("MAC verification failed.");
     }
 
     /// <summary>Verifies that the MAC of file is valid.</summary>
     /// <param name="path">The file path.</param>
-    /// <param name="mac">The MAC to verify.</param>
+    /// <param name="mac">The MAC to check.</param>
     /// <param name="key">The key.</param>
     /// <exception cref="ArgumentException">Thrown if MAC check fails</exception>
     private void VerifyFile(string path, byte[] mac, byte[] key)
     {
         byte[] fileMac = SignFile(path, key, saltLen, macLen);
+
         if (!CompareMacs(mac, fileMac))
             throw new ArgumentException("MAC verification failed.");
     }
 
     /// <summary>
     /// Handles exceptions (prints the exception message by default).
-    /// Any error handling logic can be implemented here.
+    /// Any error handling logic could be implemented here.
     /// </summary>
     private void ErrorHandler(Exception exception)
     {
@@ -412,22 +416,19 @@ class AesEncryption
     }
 
     /// <summary>
-    /// An implementation of PBKDF2 with SHA256.
-    /// Rfc2898DeriveBytes doesn't support SHA256, so I had to "roll my own".
+    /// An PBKDF2 algorithm implementation, with HMAC-SHA256.
     /// </summary>
-    /// <param name="password"></param>
-    /// <param name="salt"></param>
-    /// <param name="iterations">The number of iterations</param>
-    /// <param name="size">The key size</param>
+    /// <param name="password">The password</param>
+    /// <param name="salt">The salt</param>
     /// <returns>derived key</returns>
-    private byte[] Pbkdf2Sha256(byte[] password, byte[] salt, int iterations, int size)
+    public byte[] Pbkdf2Sha256(byte[] password, byte[] salt)
     {
         using (HMACSHA256 prf = new HMACSHA256(password))
         {
-            byte[] key = new byte[size];
-            for (int i = 1; i <= size / 32 + Convert.ToInt32(size % 32 > 0); i++)
+            byte[] dkey = new byte[this.keyLen * 2];
+            for (int i = 0; i < this.keyLen * 2 / 32; i++)
             {
-                byte[] b = BitConverter.GetBytes(i);
+                byte[] b = BitConverter.GetBytes(i + 1);
                 byte[] sb = new byte[salt.Length + 4];
 
                 Array.Reverse(b);
@@ -436,16 +437,16 @@ class AesEncryption
 
                 byte[] u = prf.ComputeHash(sb);
                 byte[] f = u;
-                for (int j = 1; j < iterations; j++)
+                for (int j = 1; j < this.keyIterations; j++)
                 {
                     u = prf.ComputeHash(u);
                     for (int k = 0; k < f.Length; k++)
                         f[k] ^= u[k];
                 }
-                int ind = (i - 1) * 32, len = (i * 32 > size) ? size % 32 : 32;
-                Array.Copy(f, 0, key, ind, len);
+                Array.Copy(f, 0, dkey, i * 32, 32);
+                ClearArrays(b, sb, u, f);
             }
-            return key;
+            return dkey;
         }
     }
 }
