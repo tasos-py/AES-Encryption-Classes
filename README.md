@@ -6,12 +6,12 @@ The goal of this project is to provide simple, portable and compatible code (dat
 However, this code hasn't been revised by professional cryptographers, so the use of a better established library (like libsodium for example) would be preferable.
 
 ### Languages  
- - Python versions 2.7, 3.6. Requires [PyCryptodome](https://www.pycryptodome.org/en/latest/index.html)
- - PHP versions 5.5, 7.1
- - C# versions 4, 7.2 with .NET Framework 4, 4.6
- - Java versions 7, 9. Only 128 bit keys are supported before Java 9
- - C++ versions 11, 17. Requires [CryptoPP](https://www.cryptopp.com/)
- - F# versions 3.0, 4.1 with .NET Framework 4, 4.6
+ - Python, versions 2.7, 3.6, requires [PyCryptodome](https://www.pycryptodome.org/en/latest/index.html)
+ - PHP, versions 5.5, 7.1
+ - C#, versions 4, 7.2, with .NET Framework 4, 4.6
+ - Java, versions 7, 9. Only 128 bit keys are supported before Java 9
+ - C++, versions 11, 17, requires [CryptoPP](https://www.cryptopp.com/)
+ - F#, versions 3.0, 4.1, with .NET Framework 4, 4.6
  
  ### Features  
 _Encryption:_  
