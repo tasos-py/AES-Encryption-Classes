@@ -3,7 +3,7 @@ AES encryption in Python, PHP, C#, Java, C++, F#
 
 ### Description  
 The goal of this project is to provide simple, portable and compatible code (data encrypted in Python can be decrypted in PHP, and so on). The encryption algorithm used is AES in CBC and CFB mode. Other modes are not provided mostly for compatibility reasons. For example, CTR is not implemented in .NET, ECB is not secure in most cases, and AEAD algorithms are not implemented in .NET and earlier versions of PHP and Java. The encrypted data contains the salt, iv and mac, in this format: salt[16] + iv[16] + ciphertext[n] + mac[32].   
-However, this code hasn't been revised by professional cryptographers, so the use of a better established library (like libsodium for example) would be preferable.
+However, this code hasn't been revised by professional cryptographers, so the use of a better established library (like libsodium for example) may be preferable.
 
 ### Languages  
  - _Python_, versions 2.7, 3.6, requires [PyCryptodome](https://www.pycryptodome.org/en/latest/index.html)
