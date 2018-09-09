@@ -9,7 +9,7 @@ using System.Text.RegularExpressions;
 /// <summary>
 /// Encrypts data and files using AES CBC/CFB, 128/192/256 bits.
 /// </summary>
-class AETest
+class AesEncryption
 {
     private Dictionary<string, CipherMode> modes = new Dictionary<string, CipherMode>()
     {
@@ -30,7 +30,7 @@ class AETest
     /// <exception cref="ArgumentException">
     /// Thrown when mode is not supported or size is invalid.
     /// </exception>
-    public AETest(string mode = "CBC", int size = 128)
+    public AesEncryption(string mode = "CBC", int size = 128)
     {
         mode = mode.ToUpper();
         if (!modes.ContainsKey(mode))
