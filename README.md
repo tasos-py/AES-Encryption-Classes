@@ -26,8 +26,8 @@ HMAC with SHA256.
 ### Examples
 _Python_
 ```
-password = 'my super strong password'
 data = 'my data'
+password = 'my super strong password'
 ae = AesEncryption()
 enc = ae.encrypt(data, password)
 
@@ -37,8 +37,8 @@ print(enc)
 
 _PHP_
 ```
-$password = "my super strong password";
 $data = "f2ZGoGCburJe19m9V7i4Gl9fswV3gDSU+g4nrG2aPXPZXh2kozprYcrB80+nTBlpo17FaOEwMlVfThCtdvN/CtGc5mLAmvhuxKNSAg2pBow=";
+$password = "my super strong password";
 $ae = new AesEncryption();
 $dec = $ae->decrypt($data, $password);
 
@@ -48,8 +48,8 @@ echo $dec;
 
 _C#_
 ```
-string password = "my super strong password";
 string data = "my data";
+string password = "my super strong password";
 AesEncryption ae = new AesEncryption("cfb");
 byte[] enc = ae.Encrypt(data, password);
 
@@ -59,8 +59,8 @@ Console.WriteLine(Encoding.ASCII.GetString(enc));
 
 _Java_
 ```
-String password = "my super strong password";
 String data = "FEBHssTudSBUJIHA+9M/cEpY+vjGRDWldgmDcsps4jmmftzMsTvUCRn7zoFSB+udZtOQLNPZKSu7YxdPE11cHGIiihcEMvQ=";
+String password = "my super strong password";
 AesEncryption ae = new AesEncryption("cfb");
 byte[] dec = ae.decrypt(data, password);
 
@@ -70,8 +70,8 @@ System.out.println(new String(dec));
 
 _C++_
 ```
-std::string password = "my super strong password";
 std::string data = "my data";
+std::string password = "my super strong password";
 AesEncryption ae("cbc", 256);
 CryptoPP::SecByteBlock enc = ae.encrypt(data, password);
 
@@ -81,8 +81,8 @@ std::cout << std::string(enc.begin(), enc.end()) << std::endl;
 
 _F#_
 ```
-let password = "my super strong password"
 let data = "wyNf1cim1JIdj+0pRBEuiJcXMd/YCWlv6eHM0oKi0NZPm3BBcHGnWwDN5K5wCP28TWqL885woQOlXOlLrj67O+ZrbS0O38ky/pf0/vNyAo4="
+let password = "my super strong password"
 let ae = new AesEncryption("cbc", 256)
 let d = ae.Decrypt(data, password)
 
