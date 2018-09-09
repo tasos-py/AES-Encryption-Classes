@@ -15,7 +15,7 @@ However, this code hasn't been revised by professional cryptographers, so the us
  
  ### Features  
 _Encryption:_  
-AES 128/192/256, CBC and CFB mode.  
+AES with 128/192/256 bit key, in CBC and CFB mode.  
 
 _Key:_  
 PBKDF2 with SHA256, 20000 iterations by default.  
@@ -27,65 +27,65 @@ HMAC with SHA256.
 _Python_
 ```
 password = 'my super strong password'
-data = 'my sensitive data'
+data = 'my data'
 ae = AesEncryption()
 enc = ae.encrypt(data, password)
 
 print(enc)
-#b'ECiCwaGbfVPpmTdk6aBtkU2n3woz3PITSL4IltUa1rra+5N5LcN3zxe5K0F9E6h9RbswCjGFhpjCNINXEDT8fRr30+W08/m30BmOOjnkIqmOhglDQXhXDIHy4XPDhgrf'
+#b'f2ZGoGCburJe19m9V7i4Gl9fswV3gDSU+g4nrG2aPXPZXh2kozprYcrB80+nTBlpo17FaOEwMlVfThCtdvN/CtGc5mLAmvhuxKNSAg2pBow='
 ```
 
 _PHP_
 ```
 $password = "my super strong password";
-$data = "ECiCwaGbfVPpmTdk6aBtkU2n3woz3PITSL4IltUa1rra+5N5LcN3zxe5K0F9E6h9RbswCjGFhpjCNINXEDT8fRr30+W08/m30BmOOjnkIqmOhglDQXhXDIHy4XPDhgrf";
+$data = "f2ZGoGCburJe19m9V7i4Gl9fswV3gDSU+g4nrG2aPXPZXh2kozprYcrB80+nTBlpo17FaOEwMlVfThCtdvN/CtGc5mLAmvhuxKNSAg2pBow=";
 $ae = new AesEncryption();
 $dec = $ae->decrypt($data, $password);
 
 echo $dec;
-//my sensitive data
+//my data
 ```
 
 _C#_
 ```
 string password = "my super strong password";
-string data = "my sensitive data";
+string data = "my data";
 AesEncryption ae = new AesEncryption("cfb");
 byte[] enc = ae.Encrypt(data, password);
 
 Console.WriteLine(Encoding.ASCII.GetString(enc));
-//Ra75+3OYi7b7OaEOJyEDAKpJjIEevRmoBprUNDgWYz0CgMkvEltbL+lciXYKY36nnYkBdrfalG820GVnnwjJXKEhGbdHmbQMnMZ7hFGKttGU
+//FEBHssTudSBUJIHA+9M/cEpY+vjGRDWldgmDcsps4jmmftzMsTvUCRn7zoFSB+udZtOQLNPZKSu7YxdPE11cHGIiihcEMvQ=
 ```
 
 _Java_
 ```
 String password = "my super strong password";
-String data = "Ra75+3OYi7b7OaEOJyEDAKpJjIEevRmoBprUNDgWYz0CgMkvEltbL+lciXYKY36nnYkBdrfalG820GVnnwjJXKEhGbdHmbQMnMZ7hFGKttGU";
+String data = "FEBHssTudSBUJIHA+9M/cEpY+vjGRDWldgmDcsps4jmmftzMsTvUCRn7zoFSB+udZtOQLNPZKSu7YxdPE11cHGIiihcEMvQ=";
 AesEncryption ae = new AesEncryption("cfb");
 byte[] dec = ae.decrypt(data, password);
 
 System.out.println(new String(dec));
-//my sensitive data
+//my data
 ```
 
 _C++_
 ```
 std::string password = "my super strong password";
-std::string data = "my sensitive data";
+std::string data = "my data";
 AesEncryption ae("cbc", 256);
 CryptoPP::SecByteBlock enc = ae.encrypt(data, password);
 
 std::cout << std::string(enc.begin(), enc.end()) << std::endl;
-//CMnoj9iOZRGqhII7wLKrnvlT2C8bTOcKTe5p2uMPe8bpIkQdH/hgwcX2rxvePvG1jpAj3uCB6ZZSU5qNpw3Bv83p54SiIsRnbomVR5x2JsgdavlAUyzY0hAK/PBtCe6k
+//wyNf1cim1JIdj+0pRBEuiJcXMd/YCWlv6eHM0oKi0NZPm3BBcHGnWwDN5K5wCP28TWqL885woQOlXOlLrj67O+ZrbS0O38ky/pf0/vNyAo4=
 ```
 
 _F#_
 ```
 let password = "my super strong password"
-let data = "CMnoj9iOZRGqhII7wLKrnvlT2C8bTOcKTe5p2uMPe8bpIkQdH/hgwcX2rxvePvG1jpAj3uCB6ZZSU5qNpw3Bv83p54SiIsRnbomVR5x2JsgdavlAUyzY0hAK/PBtCe6k"
+let data = "wyNf1cim1JIdj+0pRBEuiJcXMd/YCWlv6eHM0oKi0NZPm3BBcHGnWwDN5K5wCP28TWqL885woQOlXOlLrj67O+ZrbS0O38ky/pf0/vNyAo4="
 let ae = new AesEncryption("cbc", 256)
 let d = ae.Decrypt(data, password)
 
 printfn "%A" (Encoding.UTF8.GetString d)
-#my sensitive data
+#my data
 ```
