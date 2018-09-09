@@ -1,25 +1,25 @@
-﻿open System.Security.Cryptography
+open System.Security.Cryptography
 open System.Text
 open System.IO
 open System
 open System.Text.RegularExpressions
 
 
-/// Encrypts - decrypts data and files using AES CBC 128/192/256 bits.
+/// Encrypts data and files using AES CBC/CFB 128/192/256 bits.
 /// Throws ArgumentException when mode is not supported or size is invalid.
 type AesEncryption(?mode:string, ?size:int) = 
     let mode = (defaultArg mode "CBC").ToUpper()
     let keyLen = (defaultArg size 128) / 8
     let size = defaultArg size 128
 
-    let modes = Map.empty.Add("CBC", CipherMode.CBC)
-    let sizes = [| 128; 192; 256 |]
+    let modes = Map.empty.Add("CBC", CipherMode.CBC).Add("CFB", CipherMode.CFB)
+    let sizes = [128; 192; 256]
     let saltLen = 16
     let ivLen = 16
     let macLen = 32
 
     do
-        if not (List.contains size sizes) then
+        if not (List.exists ((=) size) sizes) then
             raise (ArgumentException "Invalid key size.")
         if not (modes.ContainsKey mode) then
             raise (ArgumentException (mode + " mode is not supported."))
@@ -160,14 +160,10 @@ type AesEncryption(?mode:string, ?size:int) =
             | :? FileNotFoundException as e -> this.ErrorHandler e; ""
             | :? ArgumentException as e -> this.ErrorHandler e; ""
     
-    /// Creates a pair of keys. 
-    /// One key is used for encryption, the other for authentication.
+    /// Creates a pair of keys, for encryption and authentication.
     member private this.Keys(password:string, salt:byte[]) = 
-        let hash = HashAlgorithmName.SHA256
-        use kdf = new Rfc2898DeriveBytes(password, salt, this.keyIterations, hash)
-        let aesKey = kdf.GetBytes keyLen
-        let macKey = kdf.GetBytes keyLen
-        aesKey, macKey
+        let dkey = this.Pbkdf2Sha256 ((Encoding.UTF8.GetBytes password), salt)
+        dkey.[..keyLen - 1], dkey.[keyLen..]
     
     /// Creates random bytes (used for IV and salt).
     member private this.RandomBytes(size:int) =
@@ -176,13 +172,14 @@ type AesEncryption(?mode:string, ?size:int) =
         rng.GetBytes rb
         rb
     
-    /// Creates an AesManaged object for encryption.
-    member private this.Cipher():AesManaged =
-        let am =  new AesManaged()
-        am.Mode <- modes.[mode]
-        am.Padding <- PaddingMode.PKCS7
-        am.KeySize <- size
-        am
+    /// Creates a RijndaelManaged object for encryption.
+    member private this.Cipher():RijndaelManaged =
+        let rm =  new RijndaelManaged()
+        rm.Mode <- modes.[mode]
+        rm.Padding <- if mode = "CFB" then PaddingMode.None else PaddingMode.PKCS7
+        rm.FeedbackSize <- if mode = "CFB" then 8 else 128
+        rm.KeySize <- size
+        rm
     
     /// Creates MAC signature.
     member private this.Sign(data:byte[], key:byte[]) = 
@@ -198,14 +195,12 @@ type AesEncryption(?mode:string, ?size:int) =
         hmac.Hash
     
     /// Verifies that the MAC is valid.
-    /// Throws ArgumentException if MAC is not valid.
     member private this.Verify(data, mac, key) = 
         let dataMac = this.Sign(data, key)
         if not (this.CompareMacs (mac, dataMac)) then
             raise (ArgumentException "MAC verification failed")
     
     /// Verifies that the MAC of file is valid.
-    /// Throws ArgumentException if MAC is not valid.
     member private this.VerifyFile(path:string, mac:byte[], key:byte[]) = 
         let fileMac = this.SignFile(path, key, saltLen, macLen)
         if not (this.CompareMacs(mac, fileMac)) then
@@ -215,8 +210,7 @@ type AesEncryption(?mode:string, ?size:int) =
     member private this.ErrorHandler(e:Exception) =
         printfn "%s" e.Message
     
-    /// Checks if the two MACs are equal, 
-    /// using constant time comparison algorithm.
+    /// Checks if the two MACs are equal, using constant time comparison.
     member private this.CompareMacs(mac1:byte[], mac2:byte[]) =
         let mutable result = mac1.Length ^^^ mac2.Length
         for i in 0 .. (min mac1.Length mac2.Length) - 1 do
@@ -224,7 +218,6 @@ type AesEncryption(?mode:string, ?size:int) =
         result = 0
      
     /// A generator that yields file chunks. 
-    /// Chunk size should be a multiple of 16.
     member private this.ReadFileChunks(path:string, ?fstart:int, ?fend:int):seq<byte[]> = 
         let chunkSize = 1024
         let fs = new FileStream(path, FileMode.Open, FileAccess.Read)
@@ -239,5 +232,20 @@ type AesEncryption(?mode:string, ?size:int) =
                 yield data 
         }
 
+    /// A PBKDF2 algorithm implementation, with HMAC-SHA256.
+    member private this.Pbkdf2Sha256(password:byte[], salt:byte[]):byte[] =
+        let mutable dkey = Array.zeroCreate<byte> 0
+        use prf = new HMACSHA256(password)
+        for i in 1..keyLen * 2 / 32 do
+            let b = Array.rev (BitConverter.GetBytes i)
+            let mutable u = prf.ComputeHash (Array.append salt b)
+            let f = u
+
+            for _ in 1..this.keyIterations - 1 do
+                u <- prf.ComputeHash u
+                for k in 0..f.Length - 1 do
+                    f.[k] <- f.[k] ^^^ u.[k]
+            dkey <- Array.append dkey f
+        dkey
 
 
