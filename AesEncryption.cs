@@ -444,7 +444,6 @@ class AesEncryption
                         f[k] ^= u[k];
                 }
                 Array.Copy(f, 0, dkey, i * 32, 32);
-                ClearArrays(b, sb, u, f);
             }
             return dkey;
         }
