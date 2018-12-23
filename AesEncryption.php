@@ -1,426 +1,549 @@
 <?php
-
+    
 /**
- * Encrypts data and files using AES CBC/CFB, 128/192/256 bits.
+ * Encrypts data and files using AES CBC/CFB - 128/192/256 bits. 
+ * 
+ * The encryption and authentication keys 
+ * are derived from the supplied key/password using HKDF/PBKDF2.
+ * The key can be set either with `setMasterKey` or with `randomKeyGen`.
+ * Encrypted data format: salt[16] + iv[16] + ciphertext[n] + mac[32].
+ * Ciphertext authenticity is verified with HMAC SHA256.
+ * 
  * @author Tasos M. Adamopoulos
  */
 class AesEncryption {
-    private $modes = array(
+    private $modes = [
         "CBC" => "AES-%d-CBC", "CFB" => "AES-%d-CFB8"
-    );
-    private $sizes = array(128, 192, 256);
+    ];
+    private $sizes = [128, 192, 256];
     private $saltLen = 16;
     private $ivLen = 16;
     private $macLen = 32;
-    private $blockLen = 16;
+    private $macKeyLen = 32;
+
     private $mode;
     private $keyLen;
+    private $masterKey = null;
 
-    /** The number of kdf iterations */
+    /** @var int $keyIterations The number of PBKDF2 iterations. */
     public $keyIterations = 20000;
 
-    /** Accept / return base64 encoded data */
+    /** @var bool $base64 Accepts and returns base64 encoded data. */
     public $base64 = true;
-    
-    /**
-     * @param string $mode AES mode (CBC, CFB)
-     * @param int $size key size (128, 192, 256)
-     * @throws UnexpectedValueException when mode or size is invalid
+
+    /** 
+     * Creates a new AesEncryption object.
+     * 
+     * @param string $mode Optional, the AES mode (CBC, CFB).
+     * @param int $size Optional, the key size (128, 192, 256).
+     * @throws UnexpectedValueException if the mode or size is not supported.
      */
     public function __construct($mode = "CBC", $size = 128) {
-        $mode = strtoupper($mode);
-        if(!array_key_exists($mode, $this->modes)) {
-            throw new UnexpectedValueException("Unsupported mode: $mode\n");
-        }
-        if(!in_array($size, $this->sizes)) {
-            throw new UnexpectedValueException("Invalid key size.\n");
-        }
-        $this->mode = $mode;
+        $this->mode = strtoupper($mode);
         $this->keyLen = $size / 8;
+
+        if (!array_key_exists($this->mode, $this->modes)) {
+            throw new UnexpectedValueException("$mode is not supported!");
+        }
+        if (!in_array($size, $this->sizes)) {
+            throw new UnexpectedValueException("Invalid key size!");
+        }
     }
     
     /**
-     * Encrypts data, returns raw bytes or base64 encoded string. 
-     * @param string $data 
-     * @param string $password
-     * @return string encrypted data (salt + iv + ciphertext + hmac)
+     * Encrypts data using a key or the supplied password.
+     *
+     * The password is not required if a master key has been set 
+     * (either with `randomKeyGen` or with `setMasterKey`). 
+     * If a password is supplied, it will be used to create a key with PBKDF2.
+     * 
+     * @param string $data The plaintext.
+     * @param string $password Optional, the password.
+     * @return string|null Encrypted data: salt + iv + ciphertext + mac.
      */
-    public function encrypt($data, $password) {
+    public function encrypt($data, $password = null) {
         $salt = $this->randomBytes($this->saltLen);
         $iv = $this->randomBytes($this->ivLen);
-        list($aesKey, $macKey) = $this->keys($password, $salt);
-        
-        $method = $this->cipher();       
-        $ciphertext = openssl_encrypt($data, $method, $aesKey, true, $iv);    
-        
-        if($ciphertext === false) {
-            $this->errorHandler("Encryption failed.\n");
-            return null;
-        }
-        $mac = $this->sign($iv.$ciphertext, $macKey); 
-        $encrypted = $salt . $iv . $ciphertext . $mac;
-        
-        if($this->base64) 
-            $encrypted = base64_encode($encrypted);
-        return $encrypted;
-    }
-    
-    /**
-     * Decrypts data with the supplied password. 
-     * @param string $data base64 encoded or raw bytes
-     * @param string $password
-     * @return string decrypted data
-     */
-    public function decrypt($data, $password) {
         try {
-            $data = $this->base64 ? base64_decode($data, true) : $data;
-            if($data === false) {
-                throw new UnexpectedValueException("Invalid data format.\n");
+            list($aesKey, $macKey) = $this->keys($salt, $password);
+            $cipher = $this->cipher($aesKey, $iv, Cipher::Encrypt);
+
+            $ciphertext = $cipher->update($data, true);
+            $mac = $this->sign($iv.$ciphertext, $macKey); 
+            $encrypted = $salt . $iv . $ciphertext . $mac;
+            
+            if ($this->base64) {
+                $encrypted = base64_encode($encrypted);
             }
-            
-            list($salt, $iv, $ciphertext, $mac) = array(
-                mb_substr($data, 0, $this->saltLen, "8bit"), 
-                mb_substr($data, $this->saltLen, $this->ivLen, "8bit"), 
-                mb_substr($data, $this->saltLen + $this->ivLen, -$this->macLen, "8bit"), 
-                mb_substr($data, -$this->macLen, $this->macLen, "8bit")
-            );
-            list($aesKey, $macKey) = $this->keys($password, $salt);
-            $this->verify($iv.$ciphertext, $mac, $macKey);
-            
-            $method = $this->cipher();
-            $decrypted = openssl_decrypt($ciphertext, $method, $aesKey, true, $iv);
-            
-            if($decrypted === false) {
-                throw new UnexpectedValueException("Decryption failed.\n");
-            }
-            return $decrypted;
-        } catch(Exception $e) {
+            return $encrypted;
+        } catch (RuntimeException $e) {
             $this->errorHandler($e);
         }
     }
     
     /**
-     * Encrypts files with the supplied password. 
-     * The original file is not modified; an encrypted copy is created.
-     * @param string $path file path
-     * @param string $password
-     * @return string path of encrypted file
+     * Decrypts data using a key or the supplied password.
+     *
+     * The password is not required if a master key has been set 
+     * (either with `randomKeyGen` or with `setMasterKey`). 
+     * If a password is supplied, it will be used to create a key with PBKDF2.
+     * 
+     * @param string $data The ciphertext.
+     * @param string $password Optional, the password.
+     * @return string|null Plaintext.
      */
-    public function encryptFile($path, $password) {
-        $newPath = $path . ".enc";
+    public function decrypt($data, $password = null) {
+        $data = $this->base64 ? base64_decode($data, true) : $data;
+        try {
+            if ($data === false) {
+                throw new UnexpectedValueException("Invalid data format!");
+            }
+            $salt = mb_substr($data, 0, $this->saltLen, "8bit");
+            $iv = mb_substr($data, $this->saltLen, $this->ivLen, "8bit");
+            $ciphertext = mb_substr(
+                $data, $this->saltLen + $this->ivLen, -$this->macLen, "8bit"
+            );
+            $mac = mb_substr($data, -$this->macLen, $this->macLen, "8bit");
+
+            list($aesKey, $macKey) = $this->keys($salt, $password);
+            $this->verify($iv.$ciphertext, $mac, $macKey);
+            
+            $cipher = $this->cipher($aesKey, $iv, Cipher::Decrypt);
+            $plaintext = $cipher->update($ciphertext, true);
+            return $plaintext;
+        } catch (RuntimeException $e) {
+            $this->errorHandler($e);
+        } catch (UnexpectedValueException $e) {
+            $this->errorHandler($e);
+        }
+    }
+    
+    /**
+     * Encrypts files using a key or the supplied password.
+     * 
+     * The password is not required if a master key has been set 
+     * (either with `randomKeyGen` or with `setMasterKey`). 
+     * If a password is supplied, it will be used to create a key with PBKDF2.
+     * The original file is not modified; a new encrypted file is created.
+     * 
+     * @param string $path The file path. 
+     * @param string $password Optional, the password.
+     * @return string|null Encrypted file path.
+     */
+    public function encryptFile($path, $password = null) {
         $salt = $this->randomBytes($this->saltLen);
         $iv = $this->randomBytes($this->ivLen);
         try {
-            if(($fileSize = filesize($path)) === false) {
-                throw new RuntimeException("Can't read file '$path'.\n");
+            $newPath = $path . ".enc";
+            if (($fp = fopen($newPath, "wb")) === false) {
+                throw new RuntimeException("Can't access '$newPath'!");
             }
-            if(($fp = fopen($newPath, "wb")) === false) {
-                throw new RuntimeException("Can't write file '$newPath'.\n");
-            }
-            fwrite($fp, $salt . $iv);
+            fwrite($fp, $salt.$iv);
 
-            list($aesKey, $macKey) = $this->keys($password, $salt);
-            $cipher = new Cipher($this->cipher(), Cipher::Encrypt, $aesKey, $iv);
+            list($aesKey, $macKey) = $this->keys($salt, $password);
+            $cipher = $this->cipher($aesKey, $iv, Cipher::Encrypt);
             $hmac = new HmacSha256($macKey, $iv);
+            $chunks = $this->fileChunks($path);
 
-            foreach($this->readFileChunks($path) as list($data, $count)) {
-                if($count == $fileSize && $this->mode == "CBC") {
-                    $data = $cipher->pad($data);
-                }
-                $ciphertext = $cipher->update($data);
+            foreach ($chunks as list($chunk, $final)) {
+                $ciphertext = $cipher->update($chunk, $final);
                 $hmac->update($ciphertext);
                 fwrite($fp, $ciphertext);
             }
             $mac = $hmac->digest();
             fwrite($fp, $mac);
             fclose($fp);
-            
             return $newPath;
-        } catch(Exception $e) {
+        } catch (RuntimeException $e) {
             $this->errorHandler($e);
         }
     }
     
     /**
-     * Decrypts files with the supplied password. 
-     * The encrypted file is not modified; a decrypted copy is created.
-     * @param string $path file path
-     * @param string $password
-     * @return string path of decrypted file
+     * Decrypts files using a key or the supplied password.
+     * 
+     * The password is not required if a master key has been set 
+     * (either with `randomKeyGen` or with `setMasterKey`). 
+     * If a password is supplied, it will be used to create a key with PBKDF2.
+     * The original file is not modified; a new decrypted file is created.
+     * 
+     * @param string $path The file path. 
+     * @param string $password Optional, the password.
+     * @return string|null Decrypted file path.
      */
-    public function decryptFile($path, $password) {    
+    public function decryptFile($path, $password = null) {    
         try {
-            if(($fp = fopen($path, "rb")) === false) {
-                throw new RuntimeException("Can't read file '$path'.\n");
+            if (($fp = fopen($path, "rb")) === false) {
+                throw new RuntimeException("Can't access '$path'!");
             }
-            $fileSize = filesize($path);
-            list($salt, $iv) = array(fread($fp, $this->saltLen), fread($fp, $this->ivLen));
-            fseek($fp, $fileSize - $this->macLen);
+            $salt = fread($fp, $this->saltLen); 
+            $iv = fread($fp, $this->ivLen);
+            fseek($fp, filesize($path) - $this->macLen);
             $mac = fread($fp, $this->macLen);
             fclose($fp);
 
-            list($aesKey, $macKey) = $this->keys($password, $salt);
+            list($aesKey, $macKey) = $this->keys($salt, $password);
             $this->verifyFile($path, $mac, $macKey);
-            
             $newPath = preg_replace("/\.enc$/", ".dec", $path);
-            if(($fp = fopen($newPath, "wb")) === false) {
-                throw new RuntimeException("Can't write file '$newPath'.\n");
-            }
-            $cipher = new Cipher($this->cipher(), Cipher::Decrypt, $aesKey, $iv);
 
-            list($beg, $end) = array($this->saltLen + $this->ivLen, $this->macLen);
-            foreach($this->readFileChunks($path, $beg, $end) as list($data, $count)) {
-                $plaintext = $cipher->update($data);
-                if($count == $fileSize - $this->macLen && $this->mode == "CBC") {
-                    $plaintext = $cipher->unpad($plaintext);
-                }
+            if (($fp = fopen($newPath, "wb")) === false) {
+                throw new RuntimeException("Can't access '$newPath'!");
+            }
+            $cipher = $this->cipher($aesKey, $iv, Cipher::Decrypt);
+            $chunks = $this->fileChunks(
+                $path, $this->saltLen + $this->ivLen, $this->macLen
+            );
+            foreach ($chunks as list($data, $final)) {
+                $plaintext = $cipher->update($data, $final);
                 fwrite($fp, $plaintext);
             }
             fclose($fp);
             return $newPath;
-        } catch(Exception $e) {
+        } catch (UnexpectedValueException $e) {
             $this->errorHandler($e);
+        } catch (RuntimeException $e) {
+            $this->errorHandler($e);
+        }
+    }
+    
+    /**
+     * Sets a new master key.
+     * This key will be used to create the encryption and authentication keys.
+     * 
+     * @param string $key The new master key.
+     * @param bool $raw Optional, expexts raw bytes (not base64-encoded).
+     */
+    public function setMasterKey($key, $raw = false) {
+        $key = ($raw) ? $key : base64_decode($key, true);
+        if ($key === false) {
+            $this->errorHandler(new RuntimeException('Failed to decode the key!'));
+        } else {
+            $this->masterKey = $key;
         }
     }
 
     /**
-     * Creates a pair of keys, for encryption and autthentication.
+     * Returns the master key (or null if the key is not set).
+     * 
+     * @param bool $raw Optional, returns raw bytes (not base64-encoded).
+     * @return string|null The master key.
      */
-    private function keys($password, $salt) {
-        $keyBytes = openssl_pbkdf2(
-            $password, $salt, $this->keyLen * 2, $this->keyIterations, "SHA256"
-        );
-        $keys = array(
-            mb_substr($keyBytes, 0, $this->keyLen, "8bit"), 
-            mb_substr($keyBytes, $this->keyLen, $this->keyLen, "8bit")
-        );
-        return $keys;
+    public function getMasterKey($raw = false) {
+        if ($this->masterKey === null) {
+            $this->errorHandler(new RuntimeException("The key is not set!"));
+        } elseif (!$raw) {
+            return base64_encode($this->masterKey);
+        } else {
+            return $this->masterKey;
+        }
     }
 
     /**
-     * Creates random bytes for IV and salt generation.
+     * Generates a new random key.
+     * This key will be used to create the encryption and authentication keys.
+     * 
+     * @param int $keyLen Optional, the key size.
+     * @param bool $raw Optional, returns raw bytes (not base64-encoded).
+     * @return string The new master key.
      */
-    private function randomBytes($size = 16) {
+    public function randomKeyGen($keyLen = 32, $raw = false) {
+        $this->masterKey = $this->randomBytes($keyLen);
+        if (!$raw) {
+            return base64_encode($this->masterKey);
+        }
+        return $this->masterKey;
+    }
+    
+    /**
+     * Handles exceptions (prints the error message by default).
+     */
+    protected function errorHandler($exception) {
+        echo $exception->getMessage();
+    }
+
+    /**
+     * Derives encryption and authentication keys from a key or password.
+     * If the password is not null, it will be used to create the keys.
+     * 
+     * @throws RuntimeException if the master key or password is not set.
+     */
+    private function keys($salt, $password = null) {
+        if ($password !== null) {
+            $dkey = openssl_pbkdf2(
+                $password, $salt, $this->keyLen + $this->macKeyLen, 
+                $this->keyIterations, "SHA512"
+            );
+        } elseif ($this->masterKey !== null) {
+            $dkey = $this->hkdfSha256(
+                $this->masterKey, $salt, $this->keyLen + $this->macKeyLen
+            );
+        } else {
+            throw new RuntimeException('No password or key specified!');
+        }
+        return array(
+            mb_substr($dkey, 0, $this->keyLen, "8bit"), 
+            mb_substr($dkey, $this->keyLen, $this->macKeyLen, "8bit")
+        );
+    }
+    
+    /**
+     * Returns a new Cipher object; used for encryption / decryption.
+     */
+    private function cipher($key, $iv, $method) {
+        $algorithm = sprintf($this->modes[$this->mode], $this->keyLen * 8);
+        return new Cipher($algorithm, $method, $key, $iv);
+    }
+
+    /**
+     * Creates random bytes, used for IV, salt and key generation.
+     */
+    private function randomBytes($size) {
         return openssl_random_pseudo_bytes($size);
     }
 
     /**
-     * Returns the cipher method of openssl.
-     */
-    private function cipher() {
-        return sprintf($this->modes[$this->mode], $this->keyLen * 8);
-    }
-
-    /**
-     * Creates MAC signature of data; using HMAC-SHA256.
+     * Computes the MAC of ciphertext, used for ciphertext authentication.
      */
     private function sign($data, $key) {
         return hash_hmac("SHA256", $data, $key, true);
     }
     
     /**
-     * Creates MAC signature of a file; using HMAC-SHA256.
+     * Verifies the authenticity of ciphertext.
+     * @throws UnexpectedValueException if MAC is invalid.
+     */
+    private function verify($data, $mac, $key) {
+        $dataMac = $this->sign($data, $key);
+        $this->compareMacs($mac, $dataMac);
+    }
+    
+    /**
+     * Computes the MAC of ciphertext, used for ciphertext authentication.
      */
     private function signFile($path, $key, $start = 0, $end = 0) {
         $hmac = new HmacSha256($key);
-        foreach($this->readFileChunks($path, $start, $end) as $data_count) {
-            $hmac->update($data_count[0]);
+        foreach ($this->fileChunks($path, $start, $end) as $chunk) {
+            $hmac->update($chunk[0]);
         }
         return $hmac->digest();
     }
     
     /**
-     * Verifies that the MAC is valid.
-     * @throws UnexpectedValueException when MAC is invalid
-     */
-    private function verify($data, $mac, $key) {
-        $dataMac = $this->sign($data, $key);
-        
-        if(is_callable("hash_equals") && !hash_equals($mac, $dataMac)) {
-            throw new UnexpectedValueException("MAC check failed.\n");
-        }
-        elseif(!$this->compareMacs($mac, $dataMac)) {
-            throw new UnexpectedValueException("MAC check failed.\n");
-        }
-    }
-    
-    /**
-     * Verifies that the MAC of file is valid.
-     * @throws UnexpectedValueException when MAC is invalid
+     * Verifies the authenticity of ciphertext.
+     * @throws UnexpectedValueException if MAC is invalid.
      */
     private function verifyFile($path, $mac, $key) {
         $fileMac = $this->signFile($path, $key, $this->saltLen, $this->macLen);
-        
-        if(is_callable("hash_equals") && !hash_equals($mac, $fileMac)) {
-            throw new UnexpectedValueException("MAC check failed.\n");
-        }
-        elseif (!$this->compareMacs($mac, $fileMac)) {
-            throw new UnexpectedValueException("MAC check failed.\n");
-        }
+        $this->compareMacs($mac, $fileMac);
     }
     
     /**
-     * Handles exceptions (prints the error message by default)
+     * A generator that reads a file and yields chunks of data.
+     * Chunk size must be a nultiple of the block size (16 bytes).
      */
-    private function errorHandler($exception) {
-        $msg = (gettype($exception) == "string") ? $exception : $exception->getMessage();
-        echo $msg;
-    }
-    
-    /**
-     * A generator that yields file chunks. 
-     * Chunk size must be a nultiple of 16 in CBC mode.
-     */
-    public function readFileChunks($path, $start = 0, $end = 0) {
+    private function fileChunks($path, $beg = 0, $end = 0) {
         $size = 1024;
         $end = filesize($path) - $end;
-        $f = fopen($path, "rb");
-        $counter = ($start > 0) ? mb_strlen(fread($f, $start), "8bit") : $start; 
+        $fp = fopen($path, "rb");
+        $pos = ($beg > 0) ? mb_strlen(fread($fp, $beg), "8bit") : $beg; 
         
-        while($counter < $end) {
-            $buffer = ($end - $counter > $size) ? $size : $end - $counter;
-            $data = fread($f, $buffer);
-            $counter += mb_strlen($data, "8bit");
-            yield array($data, $counter);
+        if ($fp === false || $end === false) {
+            throw new RuntimeException("Can't access file '$path'!");
         }
-        fclose($f);
+        while ($pos < $end) {
+            $size = ($end - $pos > $size) ? $size : $end - $pos;
+            $data = fread($fp, $size);
+            $pos += mb_strlen($data, "8bit");
+
+            yield array($data, $pos === $end);
+        }
+        fclose($fp);
     }
     
     /**
-     * Checks if the two MACs are equal; using constant time comparison.
+     * Safely compares two byte arrays, used for ciphertext uthentication.
      */
-    private function compareMacs($mac1, $mac2) {
-        $result = mb_strlen($mac1, "8bit") ^ mb_strlen($mac2, "8bit");
-        $minLen = min(mb_strlen($mac1, "8bit"), mb_strlen($mac2, "8bit"));
+    private function constantTimeComparison($macA, $macB) {
+        $result = mb_strlen($macA, "8bit") ^ mb_strlen($macB, "8bit");
+        $minLen = min(mb_strlen($macA, "8bit"), mb_strlen($macB, "8bit"));
 
         for ($i = 0; $i < $minLen; $i++) {
-            $result |= ord($mac1[$i]) ^ ord($mac2[$i]);
+            $result |= ord($macA[$i]) ^ ord($macB[$i]);
         }
-        return $result == 0;
+        return $result === 0;
+    }
+
+    /**
+     * Compares the received MAC with the computed MAC, used for uthentication.
+     * @throws UnexpectedValueException if the MACs don't match.
+     */
+    private function compareMacs($macA, $macB) {
+        if (is_callable("hash_equals") && !hash_equals($macA, $macB)) {
+            throw new UnexpectedValueException("MAC check failed!");
+        }
+        elseif (!$this->constantTimeComparison($macA, $macB)) {
+            throw new UnexpectedValueException("MAC check failed!");
+        }
+    }
+
+    /**
+     * A HKDF implementation, with HMAC SHA256.
+     * Expands the master key to create the AES and HMAC keys.
+     */
+    private function hkdfSha256($key, $salt, $keyLen, $info = "") {
+        $dkey = "";
+        $hashLen = 32;
+        $prk = hash_hmac("SHA256", $key, $salt, true);
+
+        for ($i = 0; $i < $keyLen; $i += $hashLen) {
+            $data = mb_substr($dkey, -$hashLen, $hashLen, "8bit");
+            $data .= $info . pack("C", ($i / $hashLen) + 1);
+            $dkey .= hash_hmac("SHA256", $data, $prk, true);
+        }
+        return mb_substr($dkey, 0, $keyLen, "8bit");
     }
 }
 
 
 /**
- * A wrapper class for openssl encrypt / decrypt functions, 
- * that can be used to encrypt multiple blocks.
- * This class is a helper of AesEncryption (when  encrypting files) 
+ * Encrypts data using AES. Supported modes: CBC, CFB.
+ * 
+ * This class is a wrapper for openssl_ encrypt/decrypt functions, 
+ * that can be used to encrypt multiple chunks of data.
+ * The data size must be a multiple of the block size (16 bytes).
+ * Note that this class is a helper of AesEncryption 
  * and should NOT be used on its own.
  */
 class Cipher {
-    private $method;
-    private $mode;
     private $key;
     private $iv;
-    private $blockSize = 16;
+    private $mode;
+    private $method;
 
-    const Encrypt = 1;
-    const Decrypt = 2;
-    
+    const Encrypt = "encrypt";
+    const Decrypt = "decrypt";
+
     /**
-     * @param string $method cipher method
-     * @param int $mode encryption mode
-     * @param string $key encryption key
-     * @param string $iv
+     * Creates a new Cipher object.
+     * 
+     * @param string $cipher The encryption algorithm.
+     * @param string $method The encryption method.
+     * @param string $key The key.
+     * @param string $iv The IV.
      */
-    function __construct($method, $mode, $key, $iv) {
+    function __construct($cipher, $method, $key, $iv) {
+        $this->cipher = $cipher;
         $this->method = $method;
-        $this->mode = $mode;
         $this->key = $key;
         $this->iv = $iv;
+        $this->mode = strtoupper(explode("-", $cipher)[2]);
     }
 
     /**
-     * Encrypts / decrypts data.
-     * @param string $data (must be a multiple of 16 in CBC mode)
-     * @return string 
-     * @throws UnexpectedValueException on encryption error
+     * Encrypts or decrypts a chunk of data.
+     * 
+     * The data size must be a multiple of 16 (unless it is the last chunk).
+     * It is necessary to set `$final` to true for the last chunk, 
+     * because it pads and unpads the data in CBC mode.
+     * 
+     * @throws RuntimeException on openssl error or padding error.
      */
-    public function update($data) {
-        $options = OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING; 
-        $fun = ($this->mode == Cipher::Encrypt) ? "openssl_encrypt" : "openssl_decrypt";
-        $newData = $fun($data, $this->method, $this->key, $options, $this->iv);
-
-        if($newData === false) {
-            throw new UnexpectedValueException("Encryption failed\n");
+    public function update($data, $final = false) {
+        if ($final && $this->method == Cipher::Encrypt && $this->mode == "CBC") {
+            $data = $this->pad($data);
         }
-        $ivSource = ($this->mode == Cipher::Encrypt) ? $newData : $data;
-        $this->iv = $this->getIV($ivSource);
+        $options = OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING;
+        $method =  "openssl_$this->method";
+        $newData = $method($data, $this->cipher, $this->key, $options, $this->iv);
+
+        if ($newData === false) {
+            throw new RuntimeException(openssl_error_string());
+        }
+        $ciphertext = ($this->method == Cipher::Encrypt) ? $newData : $data;
+        $this->iv = $this->lastBlock($ciphertext);
+
+        if ($final && $this->method == Cipher::Decrypt && $this->mode == "CBC") {
+            $newData = $this->unpad($newData);
+        }
         return $newData;
     }
-    
+
     /**
-     * Adds padding to data (for CBC mode).
-     * @param string $data
-     * @return string padded data
+     * Adds PKCS7 padding to plaintext, used with CBC mode.
      */
-    public function pad($data) {
-        $pad = $this->blockSize - (mb_strlen($data, "8bit") % $this->blockSize);
+    private function pad($data) {
+        $pad = 16 - (mb_strlen($data, "8bit") % 16);
         return $data . str_repeat(chr($pad), $pad);
     }
 
     /**
-     * Removes padding from decrypted data.
-     * @param string $data
-     * @return string unpadded data
-     * @throws UnexpectedValueException if padding is invalid.
+     * Removes PKCS7 padding from plaintext, used with CBC mode.
+     * @throws RuntimeException If padding is invalid.
      */
-    public function unpad($data) {
+    private function unpad($data) {
         $pad = ord(mb_substr($data, -1, 1, "8bit"));
-        $padding = mb_substr($data, -1 * $pad, $pad, "8bit");
-        if($pad < 1 || $pad > 16 || substr_count($padding, chr($pad)) != $pad) {
-            throw new UnexpectedValueException("Padding is invalid");
+        $count = substr_count(mb_substr($data, -$pad, $pad, "8bit"), chr($pad));
+
+        if ($pad < 1 || $pad > 16 || $count != $pad) {
+            throw new RuntimeException("Padding is invalid!");
         }
         return mb_substr($data, 0, -$pad, "8bit");
     }
     
     /**
-     * Returns the last 16 bytes of data to use as IV.
+     * Returns the last block of ciphertext, 
+     * which is used as an IV for openssl, to chain multiple chunks.
      */
-    private function getIV($data) {
-        $iv = mb_substr($data, -$this->blockSize, $this->blockSize, "8bit");
-        return $iv;
+    private function lastBlock($data) {
+        return mb_substr($data, -16, 16, '8bit');
     }
 }
 
 
 /**
- * Computes the MAC of multiple chunks of data.
- * Used by AesEncryption class when encrypting files, as it needs to include 
- * only specific file parts, so hash_hmac_file can't be used.
+ * A HMAC with SHA256 algorithm implementation.
+ * 
+ * Because it has an update method, it can be used for large data, 
+ * that can't be hashed with hash_hmac or hash_hmac_file.
+ * Note that this class is a helper of AesEncryption  
+ * and should NOT be used on its own.
  */
 class HmacSha256 {
     private $inner;
     private $outer;
-    
+    private $blockSize = 64;
+
     /**
-     * @param string $key the HMAC key
-     * @param string $data optional, initiates the HMAC with data
+     * @param string $key The key.
+     * @param string $data Optional, initiates the HMAC with data.
      */
     function __construct($key, $data = null) {
-        $key = $this->padKey($key);
+        $key = $this->zeroPadKey($key);
+
         $this->inner = hash_init("SHA256");
         $this->outer = hash_init("SHA256");
-        $innerKey = $this->keyTrans($key, 0x36);
-        $outerKey = $this->keyTrans($key, 0x5C);
+        $iKey = $this->xorKey($key, 0x36);
+        $oKey = $this->xorKey($key, 0x5C);
 
-        hash_update($this->inner, $innerKey);
-        hash_update($this->outer, $outerKey);
+        hash_update($this->inner, $iKey);
+        hash_update($this->outer, $oKey);
         $this->update($data);
     }
     
     /**
-     * Updates MAC with new data.
-     * @param string $data
+     * Updates the HMAC with new data.
+     * 
+     * @param string $data The data.
      */
     public function update($data) {
         hash_update($this->inner, $data);
     }
     
     /**
-     * Returns the computed MAC.
-     * @param bool $raw optional, return raw bytes or hex string
-     * @return string the MAC
+     * Returns the computed HMAC.
+     * 
+     * @param bool $raw Optional, returns raw bytes.
+     * @return string The HMAC.
      */
     public function digest($raw = true) {
         $innerHash = hash_final($this->inner, true);
@@ -429,26 +552,27 @@ class HmacSha256 {
     }
     
     /**
-     * Translates the key (shifts bytes).
+     * XORs the inner and outer keys with ipad/opad values.
      */
-    private function keyTrans($key, $value) {
-        $intXval_chr = function($n) use($value) { return chr($n ^ $value); };
-        $int_chr = function($n) { return chr($n); };
+    private function xorKey($key, $value) {
+        $xorVal = function($n) use($value) { return chr($n ^ $value); };
+        $int2chr = function($n) { return chr($n); };
 
-        $values = array_map($intXval_chr, range(0, 256));
-        $trans = array_combine(array_map($int_chr, range(0, 256)), $values);
+        $values = array_map($xorVal, range(0, 256));
+        $trans = array_combine(array_map($int2chr, range(0, 256)), $values);
         return strtr($key, $trans);
     }
     
     /** 
      * Pads the key to match the hash block size.
      */
-    private function padKey($key) {
-        if(mb_strlen($key, "8bit") > 64) {
+    private function zeroPadKey($key) {
+        if (mb_strlen($key, "8bit") > $this->blockSize) {
             $key = hash("SHA256", $key, true);
         }
-        $padding = str_repeat("\0", 64 - mb_strlen($key, "8bit"));
-        return $key . $padding;
+        $padLen = $this->blockSize - mb_strlen($key, "8bit");
+        $pad = str_repeat("\0", $padLen);
+        return $key . $pad;
     }
 }
 
