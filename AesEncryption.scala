@@ -366,8 +366,8 @@ class AesEncryption(val mode:String = "CBC", val size:Int = 128) {
    * Creates a new Cipher object; used for encryption / decryption.
    */
   private def cipher(cipherMode: Int, key: Array[Byte], iv: Array[Byte]): Cipher = {
-	  val cipher = Cipher.getInstance(this.modes(this.aesMode))
-	  cipher.init(cipherMode, new SecretKeySpec(key, "AES"), new IvParameterSpec(iv))
+    val cipher = Cipher.getInstance(this.modes(this.aesMode))
+    cipher.init(cipherMode, new SecretKeySpec(key, "AES"), new IvParameterSpec(iv))
     cipher
   }
   
