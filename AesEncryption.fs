@@ -1,5 +1,3 @@
-module AesEncryption
-
 open System.Security.Cryptography
 open System.Text
 open System.IO
