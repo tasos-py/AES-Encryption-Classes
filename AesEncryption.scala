@@ -376,18 +376,18 @@ class AesEncryption(val mode:String = "CBC", val size:Int = 128) {
    */
   private def randomBytes(size:Int): Array[Byte] = {
     val rb = new Array[Byte](size)
-	  val rng = SecureRandom.getInstance("SHA1PRNG");
-	  rng.nextBytes(rb)
-	  rb
+    val rng = SecureRandom.getInstance("SHA1PRNG");
+    rng.nextBytes(rb)
+    rb
   }
   
   /**
    * Computes the MAC of ciphertext; used for authentication.
    */
   private def sign(data: Array[Byte], key: Array[Byte]): Array[Byte] = {
-	  val hmac = Mac.getInstance("HmacSha256")
-	  hmac.init(new SecretKeySpec(key, "HmacSha256"))
-	  hmac.doFinal(data)
+    val hmac = Mac.getInstance("HmacSha256")
+    hmac.init(new SecretKeySpec(key, "HmacSha256"))
+    hmac.doFinal(data)
   }
   
    /**
@@ -406,9 +406,9 @@ class AesEncryption(val mode:String = "CBC", val size:Int = 128) {
    * @throws IOException When file is not accessible.
    */
   private def signFile(path: String, key: Array[Byte], start: Int, end: Int): Array[Byte] = {
-	  val hmac = Mac.getInstance("HmacSha256")
-	  hmac.init(new SecretKeySpec(key, "HmacSha256"))
-	  
+    val hmac = Mac.getInstance("HmacSha256")
+    hmac.init(new SecretKeySpec(key, "HmacSha256"))
+    
     for (chunk <- new FileChunks(path, start, end)) {
       hmac.update(chunk)
     }
