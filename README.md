@@ -13,9 +13,9 @@ Although the algorithms used are secure, this code hasn't been revised by profes
  - _C#_, versions 4, 7.2, with .NET Framework 4, 4.6
  - _Java_, versions 8, 10. Only 128 bit keys are supported before Java 9
  - _C++_, versions 11, 17. Requires [CryptoPP](https://www.cryptopp.com/)
- - _F#_, versions 3.0, 4.1, with .NET Framework 4, 4.6
- - _Ruby_, versions 1.9.2 - 2.5.1
- - _Scala_, versions 2.12.6. Only 128 bit keys are supported before Java 9
+ - _F#_, versions 3.0, 4.1, with .NET Framework 4, 4.6  
+ - _Ruby_, versions 1.9.2 - 2.5.1  
+ - _Scala_, versions 2.12.6. Only 128 bit keys are supported before Java 9  
  -_Node.js_, versions 5.10.0 - 10.13.0
 
 ### Features  
