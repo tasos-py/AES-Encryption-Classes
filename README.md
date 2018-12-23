@@ -119,7 +119,7 @@ println(new String(dec))
 //my data
 ```
 
-_node.js_  
+_Node.js_  
 ```
 const aes = new AesEncryption();
 const key = aes.randomKeyGen();
