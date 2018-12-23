@@ -217,13 +217,10 @@ class AesEncryption
                     byte[] ciphertext = new byte[data.Length];
 
                     if ((bool)chunk[1])
-                    {
                         ciphertext = ict.TransformFinalBlock(data, 0, data.Length);
-                    }
                     else
-                    {
                         ict.TransformBlock(data, 0, data.Length, ciphertext, 0);
-                    }
+                    
                     hmac.TransformBlock(ciphertext, 0, ciphertext.Length, null, 0);
                     fs.Write(ciphertext, 0, ciphertext.Length);
                 }
