@@ -16,7 +16,7 @@ Although the algorithms used are secure, this code hasn't been revised by profes
  - _F#_, versions 3.0, 4.1, with .NET Framework 4, 4.6  
  - _Ruby_, versions 1.9.2 - 2.5.1  
  - _Scala_, versions 2.12.6. Only 128 bit keys are supported before Java 9  
- -_Node.js_, versions 5.10.0 - 10.13.0
+ - _Node.js_, versions 5.10.0 - 10.13.0
 
 ### Features  
 _Encryption:_  
