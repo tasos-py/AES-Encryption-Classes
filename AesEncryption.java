@@ -103,9 +103,9 @@ class AesEncryption {
             }
             return encrypted;
         } catch (IllegalArgumentException e) {
-        	this.errorHandler(e);
+            this.errorHandler(e);
         } catch (IllegalBlockSizeException | BadPaddingException e) {
-        	throw new AssertionError(e);
+            throw new AssertionError(e);
         }
     	return null;
     }
@@ -155,11 +155,11 @@ class AesEncryption {
             Cipher cipher = this.cipher(Cipher.DECRYPT_MODE, aesKey, iv);
             byte[] plaintext = cipher.doFinal(ciphertext);
             return plaintext;
-	    } catch (IllegalArgumentException | ArrayIndexOutOfBoundsException e) {
-	    	this.errorHandler(e);
-	    } catch (IllegalBlockSizeException | BadPaddingException e) {
-	    	this.errorHandler(e);
-	    }
+        } catch (IllegalArgumentException | ArrayIndexOutOfBoundsException e) {
+            this.errorHandler(e);
+        } catch (IllegalBlockSizeException | BadPaddingException e) {
+            this.errorHandler(e);
+        }
         return null;
     }
     
@@ -220,10 +220,10 @@ class AesEncryption {
             fos.close();
             return newPath;
         } catch (IllegalArgumentException | IOException e) {
-        	this.errorHandler(e);
+            this.errorHandler(e);
         } catch (IllegalBlockSizeException | BadPaddingException e) {
-	    	throw new AssertionError(e);
-	    } catch (NoSuchAlgorithmException | InvalidKeyException e) {
+            throw new AssertionError(e);
+        } catch (NoSuchAlgorithmException | InvalidKeyException e) {
             throw new AssertionError(e);
         }
         return null;
@@ -270,10 +270,10 @@ class AesEncryption {
             fos.close();            
             return newPath;
         } catch (IllegalArgumentException | IOException e)  {
-        	this.errorHandler(e);
+            this.errorHandler(e);
         } catch (IllegalBlockSizeException | BadPaddingException e) {
-	    	this.errorHandler(e);
-	    }
+            this.errorHandler(e);
+        }
         return null;
     }
 
@@ -289,7 +289,7 @@ class AesEncryption {
     	try {
             masterKey = (_raw) ? key : Base64.getDecoder().decode(key);
     	} catch (IllegalArgumentException e) {
-    		this.errorHandler(e);
+            this.errorHandler(e);
     	}
     }
 
@@ -361,13 +361,13 @@ class AesEncryption {
         if (password != null && password.length > 0) {
             dkey = this.pbkdf2Sha512(password[0], salt, keyLen + macKeyLen);
         } else if (this.masterKey != null) {
-        	dkey = this.hkdfSha256(this.masterKey, salt, keyLen + macKeyLen);
+            dkey = this.hkdfSha256(this.masterKey, salt, keyLen + macKeyLen);
         } else {
-        	throw new IllegalArgumentException("No password or key specified!"); 
+            throw new IllegalArgumentException("No password or key specified!"); 
         }
         return new SecretKeySpec[] {
-        	new SecretKeySpec(dkey, 0, keyLen, "AES"), 
-        	new SecretKeySpec(dkey, keyLen, macKeyLen, "HmacSHA256")
+            new SecretKeySpec(dkey, 0, keyLen, "AES"), 
+            new SecretKeySpec(dkey, keyLen, macKeyLen, "HmacSHA256")
         };
     }
 
@@ -517,7 +517,7 @@ class AesEncryption {
             SecretKeyFactory skf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA512");
             byte[] dkey = skf.generateSecret(kspec).getEncoded();
             kspec.clearPassword();
-			return dkey;
+            return dkey;
         } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
             throw new AssertionError(e);
         }
