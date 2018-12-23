@@ -188,8 +188,8 @@ class AesEncryption(val mode:String = "CBC", val size:Int = 128) {
       val (aesKey, macKey) = this.keys(salt, password)      
       val cipher = this.cipher(Cipher.ENCRYPT_MODE, aesKey, iv)
       
-	    val hmac = Mac.getInstance("HmacSHA256")	    
-	    hmac.init(new SecretKeySpec(macKey, "HmacSHA256"))
+      val hmac = Mac.getInstance("HmacSHA256")	    
+      hmac.init(new SecretKeySpec(macKey, "HmacSHA256"))
       hmac.update(iv)
 
       val newPath = path + ".enc"
