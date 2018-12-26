@@ -32,7 +32,7 @@ HMAC with SHA256.
 
 ### Examples  
 
-***Python*** _AES-128-CBC (the default) encryption, password-based._  
+***Python***  _AES-128-CBC (the default) encryption, password-based._  
 ```
 data = 'my data'
 password = 'my super strong password'
@@ -43,7 +43,7 @@ print(enc)
 #b'jDY94lq4C84RXD4uPohrqUZvyZNJg3L+KBl7d9S6hPufBCBeUcrsYoialAR+M+nJt4rWwWvB41ScQQOrlc3OzKukLqlP0Zir/z7yaiYQwB4='
 ```
 
-***PHP*** _AES-128-CBC (the default) decryption, password-based._  
+***PHP***  _AES-128-CBC (the default) decryption, password-based._  
 ```
 $data = "jDY94lq4C84RXD4uPohrqUZvyZNJg3L+KBl7d9S6hPufBCBeUcrsYoialAR+M+nJt4rWwWvB41ScQQOrlc3OzKukLqlP0Zir/z7yaiYQwB4=";
 $password = "my super strong password";
@@ -54,7 +54,7 @@ echo $dec;
 //my data
 ```
 
-***C#*** _AES-128-CFB encryption, password-based._  
+***C#***  _AES-128-CFB encryption, password-based._  
 ```
 string data = "my data";
 string password = "my super strong password";
@@ -65,7 +65,7 @@ Console.WriteLine(Encoding.ASCII.GetString(enc));
 //NDVqzcBopFejULtlhK0vy66kFI2UiI3mEiu6XrfW0D3Qjf66cQES9PBk28Jhyc0QWk6XpBD4Fsth9EJStxXw7UgIerZ4OyM=
 ```
 
-***Java*** _AES-128-CFB decryption, password-based._  
+***Java***  _AES-128-CFB decryption, password-based._  
 ```
 String data = "NDVqzcBopFejULtlhK0vy66kFI2UiI3mEiu6XrfW0D3Qjf66cQES9PBk28Jhyc0QWk6XpBD4Fsth9EJStxXw7UgIerZ4OyM=";
 String password = "my super strong password";
@@ -76,7 +76,7 @@ System.out.println(new String(dec));
 //my data
 ```
 
-***C++*** _AES-256-CBC encryption, password-based._  
+***C++***  _AES-256-CBC encryption, password-based._  
 ```
 std::string data = "my data";
 std::string password = "my super strong password";
@@ -87,7 +87,7 @@ std::cout << std::string(enc.begin(), enc.end()) << std::endl;
 //xDl8P0fKwL2pgi6WQPvd5iLUjT9IuBiZKBrH2DXdPT/wwKiQILnn/daaCYvu7cNv9894ap3HzgmgaOcIzT1TOWwUISAmMGqqOosLPl5Qu6o=
 ```
 
-***F#*** _AES-256-CBC decryption, password-based._  
+***F#***  _AES-256-CBC decryption, password-based._  
 ```
 let data = "xDl8P0fKwL2pgi6WQPvd5iLUjT9IuBiZKBrH2DXdPT/wwKiQILnn/daaCYvu7cNv9894ap3HzgmgaOcIzT1TOWwUISAmMGqqOosLPl5Qu6o="
 let password = "my super strong password"
@@ -98,7 +98,7 @@ printfn "%A" (Encoding.UTF8.GetString dec)
 #my data
 ```
 
-***Ruby*** _AES-128-CBC encryption, key-based._  
+***Ruby***  _AES-128-CBC encryption, key-based._  
 ```
 aes = AesEncryption.new()
 key = aes.random_key_gen()
@@ -121,7 +121,7 @@ println(new String(dec))
 //my data
 ```
 
-**Node.js*** _AES-128-CBC, file encryption and decryption, key-based._  
+***Node.js***  _AES-128-CBC, file encryption and decryption, key-based._  
 ```
 const aes = new AesEncryption();
 const key = aes.randomKeyGen();
