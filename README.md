@@ -2,10 +2,10 @@
 AES encryption in Python, PHP, C#, Java, C++, F#, Ruby, Scala, Node.js
 
 ### Description  
-The goal of this project is to provide simple, portable and compatible code (data encrypted in Python can be decrypted in PHP, and so on). The encryption algorithm used is AES in CBC and CFB mode. Other modes are not provided mostly for compatibility reasons (.NET Framework). 
-Ciphertext authenticity is verified with HMAC SHA256.
-The encrypted data contains the salt, iv and mac, in this format: salt[16] + iv[16] + ciphertext[n] + mac[32]. 
-Although the algorithms used are secure, this code hasn't been revised by professional cryptographers, so the use of a better established library may be preferable.
+The goal of this project is to provide simple, portable and compatible code (data encrypted in Python can be decrypted in PHP, and so on).  The encryption algorithm used is AES in CBC and CFB mode. Other modes are not provided mostly for compatibility reasons (.NET Framework). 
+Ciphertext authenticity is verified with HMAC SHA256. 
+The encrypted data contains the salt, iv and mac, in this format: salt[16] + iv[16] + ciphertext[n] + mac[32].  
+Although the algorithms used are secure, this code hasn't been revised by professional cryptographers, so the use of a better established library may be preferable.  
 
 ### Languages  
 
@@ -32,7 +32,7 @@ HMAC with SHA256.
 
 ### Examples  
 
-_Python_ AES-128-CBC (the default) encryption, password-based.  
+***Python*** _AES-128-CBC (the default) encryption, password-based._  
 ```
 data = 'my data'
 password = 'my super strong password'
@@ -43,7 +43,7 @@ print(enc)
 #b'jDY94lq4C84RXD4uPohrqUZvyZNJg3L+KBl7d9S6hPufBCBeUcrsYoialAR+M+nJt4rWwWvB41ScQQOrlc3OzKukLqlP0Zir/z7yaiYQwB4='
 ```
 
-_PHP_ AES-128-CBC (the default) decryption, password-based.  
+***PHP*** _AES-128-CBC (the default) decryption, password-based._  
 ```
 $data = "jDY94lq4C84RXD4uPohrqUZvyZNJg3L+KBl7d9S6hPufBCBeUcrsYoialAR+M+nJt4rWwWvB41ScQQOrlc3OzKukLqlP0Zir/z7yaiYQwB4=";
 $password = "my super strong password";
@@ -54,7 +54,7 @@ echo $dec;
 //my data
 ```
 
-_C#_ AES-128-CFB encryption, password-based.  
+***C#*** _AES-128-CFB encryption, password-based._  
 ```
 string data = "my data";
 string password = "my super strong password";
@@ -65,7 +65,7 @@ Console.WriteLine(Encoding.ASCII.GetString(enc));
 //NDVqzcBopFejULtlhK0vy66kFI2UiI3mEiu6XrfW0D3Qjf66cQES9PBk28Jhyc0QWk6XpBD4Fsth9EJStxXw7UgIerZ4OyM=
 ```
 
-_Java_ AES-128-CFB decryption, password-based.  
+***Java*** _AES-128-CFB decryption, password-based._  
 ```
 String data = "NDVqzcBopFejULtlhK0vy66kFI2UiI3mEiu6XrfW0D3Qjf66cQES9PBk28Jhyc0QWk6XpBD4Fsth9EJStxXw7UgIerZ4OyM=";
 String password = "my super strong password";
@@ -76,7 +76,7 @@ System.out.println(new String(dec));
 //my data
 ```
 
-_C++_ AES-256-CBC encryption, password-based.  
+***C++*** _AES-256-CBC encryption, password-based._  
 ```
 std::string data = "my data";
 std::string password = "my super strong password";
@@ -87,7 +87,7 @@ std::cout << std::string(enc.begin(), enc.end()) << std::endl;
 //xDl8P0fKwL2pgi6WQPvd5iLUjT9IuBiZKBrH2DXdPT/wwKiQILnn/daaCYvu7cNv9894ap3HzgmgaOcIzT1TOWwUISAmMGqqOosLPl5Qu6o=
 ```
 
-_F#_ AES-256-CBC decryption, password-based.  
+***F#*** _AES-256-CBC decryption, password-based._  
 ```
 let data = "xDl8P0fKwL2pgi6WQPvd5iLUjT9IuBiZKBrH2DXdPT/wwKiQILnn/daaCYvu7cNv9894ap3HzgmgaOcIzT1TOWwUISAmMGqqOosLPl5Qu6o="
 let password = "my super strong password"
@@ -98,7 +98,7 @@ printfn "%A" (Encoding.UTF8.GetString dec)
 #my data
 ```
 
-_Ruby_  AES-128-CBC encryption, key-based.  
+***Ruby*** _AES-128-CBC encryption, key-based._  
 ```
 aes = AesEncryption.new()
 key = aes.random_key_gen()
@@ -110,7 +110,7 @@ puts enc
 #NXOjXel/xtIDgb+LMnIseCSQB6Mv/LRfMP1bMiqtCGRGd/t6uR0zSV8zDShmZhY4z4xFSX/hxGwGh/jQhvMA53qBnEyhquf3b7PEhdHvMKs=
 ```
 
-_Scala_  AES-128-CBC decryption, key-based.  
+***Scala***  _AES-128-CBC decryption, key-based._  
 ```
 val data = "NXOjXel/xtIDgb+LMnIseCSQB6Mv/LRfMP1bMiqtCGRGd/t6uR0zSV8zDShmZhY4z4xFSX/hxGwGh/jQhvMA53qBnEyhquf3b7PEhdHvMKs="
 val aes = new AesEncryption()
@@ -121,7 +121,7 @@ println(new String(dec))
 //my data
 ```
 
-_Node.js_  AES-128-CBC, file encryption and decryption, key-based.  
+**Node.js*** _AES-128-CBC, file encryption and decryption, key-based._  
 ```
 const aes = new AesEncryption();
 const key = aes.randomKeyGen();
@@ -130,3 +130,4 @@ var path = '/path/to/file.txt';
 var encPath = aes.encryptFile(path);
 var decPath = aes.decryptFile(encPath);
 ```
+
