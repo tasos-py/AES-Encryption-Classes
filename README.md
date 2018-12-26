@@ -8,6 +8,7 @@ The encrypted data contains the salt, iv and mac, in this format: salt[16] + iv[
 Although the algorithms used are secure, this code hasn't been revised by professional cryptographers, so the use of a better established library may be preferable.
 
 ### Languages  
+
  - _Python_, versions 2.7 - 3.6. Requires [PyCryptodome](https://www.pycryptodome.org/en/latest/index.html)
  - _PHP_, versions 5.5 - 7.2
  - _C#_, versions 4, 7.2, with .NET Framework 4, 4.6
@@ -22,15 +23,16 @@ Although the algorithms used are secure, this code hasn't been revised by profes
 _Encryption:_  
 AES with 128/192/256 bit key, in CBC and CFB mode.  
 
-_Key:_  
+_Keys:_  
 Password-based: PBKDF2 with SHA512, 20000 iterations by default.  
 Key-based: HKDF with SHA256.  
 
 _Authentication:_  
 HMAC with SHA256.
 
-### Examples
-_Python_
+### Examples  
+
+_Python_ AES-128-CBC (the default) encryption, password-based.  
 ```
 data = 'my data'
 password = 'my super strong password'
@@ -41,7 +43,7 @@ print(enc)
 #b'jDY94lq4C84RXD4uPohrqUZvyZNJg3L+KBl7d9S6hPufBCBeUcrsYoialAR+M+nJt4rWwWvB41ScQQOrlc3OzKukLqlP0Zir/z7yaiYQwB4='
 ```
 
-_PHP_
+_PHP_ AES-128-CBC (the default) decryption, password-based.  
 ```
 $data = "jDY94lq4C84RXD4uPohrqUZvyZNJg3L+KBl7d9S6hPufBCBeUcrsYoialAR+M+nJt4rWwWvB41ScQQOrlc3OzKukLqlP0Zir/z7yaiYQwB4=";
 $password = "my super strong password";
@@ -52,7 +54,7 @@ echo $dec;
 //my data
 ```
 
-_C#_
+_C#_ AES-128-CFB encryption, password-based.  
 ```
 string data = "my data";
 string password = "my super strong password";
@@ -63,7 +65,7 @@ Console.WriteLine(Encoding.ASCII.GetString(enc));
 //NDVqzcBopFejULtlhK0vy66kFI2UiI3mEiu6XrfW0D3Qjf66cQES9PBk28Jhyc0QWk6XpBD4Fsth9EJStxXw7UgIerZ4OyM=
 ```
 
-_Java_
+_Java_ AES-128-CFB decryption, password-based.  
 ```
 String data = "NDVqzcBopFejULtlhK0vy66kFI2UiI3mEiu6XrfW0D3Qjf66cQES9PBk28Jhyc0QWk6XpBD4Fsth9EJStxXw7UgIerZ4OyM=";
 String password = "my super strong password";
@@ -74,7 +76,7 @@ System.out.println(new String(dec));
 //my data
 ```
 
-_C++_
+_C++_ AES-256-CBC encryption, password-based.  
 ```
 std::string data = "my data";
 std::string password = "my super strong password";
@@ -85,7 +87,7 @@ std::cout << std::string(enc.begin(), enc.end()) << std::endl;
 //xDl8P0fKwL2pgi6WQPvd5iLUjT9IuBiZKBrH2DXdPT/wwKiQILnn/daaCYvu7cNv9894ap3HzgmgaOcIzT1TOWwUISAmMGqqOosLPl5Qu6o=
 ```
 
-_F#_
+_F#_ AES-256-CBC decryption, password-based.  
 ```
 let data = "xDl8P0fKwL2pgi6WQPvd5iLUjT9IuBiZKBrH2DXdPT/wwKiQILnn/daaCYvu7cNv9894ap3HzgmgaOcIzT1TOWwUISAmMGqqOosLPl5Qu6o="
 let password = "my super strong password"
@@ -96,7 +98,7 @@ printfn "%A" (Encoding.UTF8.GetString dec)
 #my data
 ```
 
-_Ruby_  
+_Ruby_  AES-128-CBC encryption, key-based.  
 ```
 aes = AesEncryption.new()
 key = aes.random_key_gen()
@@ -108,7 +110,7 @@ puts enc
 #NXOjXel/xtIDgb+LMnIseCSQB6Mv/LRfMP1bMiqtCGRGd/t6uR0zSV8zDShmZhY4z4xFSX/hxGwGh/jQhvMA53qBnEyhquf3b7PEhdHvMKs=
 ```
 
-_Scala_  
+_Scala_  AES-128-CBC decryption, key-based.  
 ```
 val data = "NXOjXel/xtIDgb+LMnIseCSQB6Mv/LRfMP1bMiqtCGRGd/t6uR0zSV8zDShmZhY4z4xFSX/hxGwGh/jQhvMA53qBnEyhquf3b7PEhdHvMKs="
 val aes = new AesEncryption()
@@ -119,7 +121,7 @@ println(new String(dec))
 //my data
 ```
 
-_Node.js_  
+_Node.js_  AES-128-CBC, file encryption and decryption, key-based.  
 ```
 const aes = new AesEncryption();
 const key = aes.randomKeyGen();
