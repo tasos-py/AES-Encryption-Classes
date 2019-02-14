@@ -298,6 +298,9 @@ class AesEncryption {
      * Creates random bytes, used for IV, salt and key generation.
      */
     private function randomBytes($size) {
+        if (is_callable("random_bytes")) {
+            return random_bytes($size);
+        }
         return openssl_random_pseudo_bytes($size);
     }
 
