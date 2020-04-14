@@ -155,7 +155,7 @@ private:
 
     /// \brief Derives encryption and authentication keys from a key or password.
     void keys(
-        CryptoPP::SecByteBlock password, const CryptoPP::byte* salt,
+        CryptoPP::SecByteBlock password, const unsigned char* salt,
         CryptoPP::SecByteBlock& aesKey, CryptoPP::SecByteBlock& macKey
     );
 
@@ -218,12 +218,12 @@ class Base64
 {
 public:
     /// \brief Encodes data.
-    static CryptoPP::SecByteBlock encode(const CryptoPP::byte*, size_t);
+    static CryptoPP::SecByteBlock encode(const unsigned char*, size_t);
     /// \brief Decodes data.
-    static CryptoPP::SecByteBlock decode(const CryptoPP::byte*, size_t, bool);
+    static CryptoPP::SecByteBlock decode(const unsigned char*, size_t, bool);
 private:
     /// \brief Checks if encoded data have the expected format.
-    static void checkEncoded(const CryptoPP::byte*, size_t);
+    static void checkEncoded(const unsigned char*, size_t);
 };
 
 
@@ -238,7 +238,7 @@ public:
     FileChunks(std::string path, size_t start = 0, size_t end = 0);
     /// \brief Reads file data.
     /// \param data The buffer (the buffer size size must be equal to FileChunks::chunkSize).
-    size_t read(CryptoPP::byte* data);
+    size_t read(unsigned char* data);
     /// \brief Checks if thera are more data to read.
     bool hasData();
     /// \brief Returns the size of a file.
