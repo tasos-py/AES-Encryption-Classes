@@ -177,7 +177,7 @@ std::string AesEncryption::encryptFile(std::string path, CryptoPP::SecByteBlock 
         CryptoPP::HMAC<CryptoPP::SHA256> hmac(macKey, this->macKeyLen);
 
         FileChunks ifs(path);
-        CryptoPP::byte chunk[FileChunks::chunkSize];
+        unsigned char chunk[FileChunks::chunkSize];
 
         hmac.Update(iv.data(), iv.size());
         ofs.write((char*)salt.data(), saltLen);
@@ -201,7 +201,7 @@ std::string AesEncryption::encryptFile(std::string path, CryptoPP::SecByteBlock 
         ofs.write((char*)ciphertext.data(), ciphertext.size());
         hmac.Update(ciphertext, ciphertext.size());
 
-        CryptoPP::byte mac[macLen];
+        unsigned char mac[macLen];
         hmac.Final(mac);
         ofs.write((char*)mac, macLen);
         ofs.close();
@@ -256,7 +256,7 @@ std::string AesEncryption::decryptFile(std::string path, CryptoPP::SecByteBlock 
         CryptoPP::StreamTransformationFilter stf(*cipher, NULL);
 
         FileChunks fc(path, saltLen + ivLen, macLen);
-        CryptoPP::byte chunk[FileChunks::chunkSize];
+        unsigned char chunk[FileChunks::chunkSize];
         std::string newPath = std::regex_replace(path, std::regex(".enc$"), ".dec");
 
         std::ofstream ofs(newPath, std::ios::binary | std::ios::trunc);
@@ -338,7 +338,7 @@ CryptoPP::SecByteBlock AesEncryption::randomKeyGen(size_t keyLen, bool raw)
     return this->masterKey;
 }
 
-void AesEncryption::keys(CryptoPP::SecByteBlock password, const CryptoPP::byte* salt,
+void AesEncryption::keys(CryptoPP::SecByteBlock password, const unsigned char* salt,
     CryptoPP::SecByteBlock& aesKey, CryptoPP::SecByteBlock& macKey)
 {
     CryptoPP::SecByteBlock dkey(this->keyLen + this->macKeyLen);
@@ -407,13 +407,13 @@ CryptoPP::SecByteBlock AesEncryption::signFile(std::string path, CryptoPP::SecBy
 {
     CryptoPP::HMAC<CryptoPP::SHA256> hmac(key, macKeyLen);
     FileChunks fc(path, saltLen);
-    CryptoPP::byte chunk[FileChunks::chunkSize];
+    unsigned char chunk[FileChunks::chunkSize];
 
     while (fc.hasData()) {
         size_t chunkSize = fc.read(chunk);
         hmac.Update(chunk, chunkSize);
     }
-    CryptoPP::byte mac[macLen];
+    unsigned char mac[macLen];
     hmac.Final(mac);
 
     return CryptoPP::SecByteBlock(mac, macLen);
@@ -423,7 +423,7 @@ void AesEncryption::verifyFile(std::string path, CryptoPP::SecByteBlock mac, Cry
 {
     CryptoPP::HMAC<CryptoPP::SHA256> hmac(key, macKeyLen);
     FileChunks fc(path, saltLen, macLen);
-    CryptoPP::byte chunk[FileChunks::chunkSize];
+    unsigned char chunk[FileChunks::chunkSize];
 
     while (fc.hasData()) {
         size_t chunkSize = fc.read(chunk);
@@ -496,7 +496,7 @@ std::map<unsigned int, Ciphers::Cipher> Ciphers::ciphers = {
 
 // Base64 methods //
 
-CryptoPP::SecByteBlock Base64::encode(const CryptoPP::byte* data, size_t size)
+CryptoPP::SecByteBlock Base64::encode(const unsigned char* data, size_t size)
 {
     CryptoPP::Base64Encoder encoder(NULL, false);
     encoder.Put(data, size);
@@ -507,7 +507,7 @@ CryptoPP::SecByteBlock Base64::encode(const CryptoPP::byte* data, size_t size)
     return encoded;
 }
 
-CryptoPP::SecByteBlock Base64::decode(const CryptoPP::byte* data, size_t size, bool check)
+CryptoPP::SecByteBlock Base64::decode(const unsigned char* data, size_t size, bool check)
 {
     if (check) {
         Base64::checkEncoded(data, size);
@@ -521,7 +521,7 @@ CryptoPP::SecByteBlock Base64::decode(const CryptoPP::byte* data, size_t size, b
     return decoded;
 }
 
-void Base64::checkEncoded(const CryptoPP::byte* data, size_t size)
+void Base64::checkEncoded(const unsigned char* data, size_t size)
 {
     std::string validChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=\n";
 
@@ -548,7 +548,7 @@ FileChunks::FileChunks(std::string path, size_t start, size_t end)
     this->file.seekg(start, this->file.beg);
 }
 
-size_t FileChunks::read(CryptoPP::byte* data)
+size_t FileChunks::read(unsigned char* data)
 {
     int count = (end - pos > chunkSize) ? chunkSize : end - pos;
 
@@ -579,5 +579,3 @@ size_t FileChunks::fileSize(std::string path)
 
     return size;
 }
-
-
